@@ -32,5 +32,7 @@ target_link_libraries(test_compositor PUBLIC ngosen_protocols_server PkgConfig::
 
 add_executable(wire-test wire.cpp)
 target_link_libraries(wire-test PRIVATE test_compositor)
+# The daemon looks for the dictionary where it is installed; the tests run from the build tree.
+target_compile_definitions(wire-test PRIVATE TEST_DICTIONARY="${PROJECT_SOURCE_DIR}/ngosen/data/dictionaries/vietnamese.cm.dict")
 add_test(NAME wire COMMAND wire-test $<TARGET_FILE:wl-ngosen>)
 set_tests_properties(wire PROPERTIES LABELS "wire" TIMEOUT 120)

@@ -61,6 +61,10 @@ namespace test {
         void contentType(uint32_t hint, uint32_t purpose);
         // send false keeps the event queued, so the daemon reads it with what follows.
         void done(bool send = true);
+        // done events sent so far, which a commit must name as its serial.
+        uint32_t dones() const {
+            return dones_;
+        }
         void unavailable();
         void removeInputMethodGlobal();
 
@@ -72,7 +76,7 @@ namespace test {
         void sendEmptyKeymap();
         void sendBrokenKeymap();
         void key(uint32_t code, bool pressed, bool send = true);
-        void tap(uint32_t code);
+        void tap(uint32_t code, bool send = true);
         void modifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
         void repeatInfo(int32_t rate, int32_t delay);
 
@@ -114,6 +118,7 @@ namespace test {
         std::vector<Toplevel>    toplevels_;
         wl_global*               imGlobal_    = nullptr;
         uint32_t                 serial_      = 0;
+        uint32_t                 dones_       = 0;
         uint32_t                 time_        = 1000;
         uint32_t                 barrierCode_ = 88; // F12
         pid_t                    pid_         = -1;

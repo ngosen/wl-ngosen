@@ -17,3 +17,5 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   hỗ trợ (GNOME, KDE) thì thoát êm (#3).
 - Phím đổi Anh/Việt (mặc định Ctrl+Shift, đổi được trong cài đặt) chạy như bản IBus và fcitx5; lựa chọn Anh/Việt dùng chung
   với bản IBus (#4).
+- Gõ tiếng Việt kiểu Preedit (chữ gạch chân khi đang gõ), dùng chung lõi và cài đặt với bản IBus; ô mật khẩu nhận phím
+  nguyên vẹn (#5).
