@@ -25,19 +25,22 @@ namespace ngosen {
 
         // app_id of the window marked activated in its last done; empty when there is none, as for a
         // layer-shell launcher.
-        std::string activeApp() const;
+        std::string activeAppId() const;
+        // The same app named as the IBus edition names it on GNOME, so a Flatpak app keeps its rules.
+        std::string activeProgram() const;
 
       private:
         struct Window {
             Toplevels*                       owner  = nullptr;
             zwlr_foreign_toplevel_handle_v1* handle = nullptr;
-            std::string                      appId, pendingAppId;
+            std::string                      appId, pendingAppId, program;
             bool                             activated = false, pendingActivated = false;
         };
         friend struct ToplevelListeners;
 
         void                                 addWindow(zwlr_foreign_toplevel_handle_v1* handle);
         void                                 removeWindow(Window* window);
+        const Window*                        activeWindow() const;
 
         zwlr_foreign_toplevel_manager_v1*    manager_;
         std::vector<std::unique_ptr<Window>> windows_;

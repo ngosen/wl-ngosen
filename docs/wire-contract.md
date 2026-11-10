@@ -120,4 +120,6 @@ is empty and the shared mode applies.
 The mode follows the IBus edition's rules and files: the toggle key's last choice in the app
 (`ngosen-app-switch.conf`) decides the language, else the mode picked for the app
 (`ngosen-app-rules.conf`), else the last switch anywhere; a mode picked for the app wins over
-`DirectTyping`. The app is named with `modeAppName`, as there.
+`DirectTyping`. The app is named as there: a Flatpak app_id becomes the name its exported desktop
+file's `StartupWMClass` gives (`gnomeProgramName`), then `modeAppName`. `Field.program` carries that
+name, and `reportedProgram` the app_id when they differ.

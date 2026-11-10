@@ -5,6 +5,8 @@
  */
 #include "ngosen-toplevels.h"
 
+#include "ngosen-ibus-program-name.h"
+
 #include "wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
 
 #include <algorithm>
@@ -27,8 +29,12 @@ namespace ngosen {
             window->pendingActivated = std::find(begin, end, ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED) != end;
         }
         static void done(void* data, zwlr_foreign_toplevel_handle_v1*) {
-            auto* window      = static_cast<Window*>(data);
-            window->appId     = window->pendingAppId;
+            auto* window = static_cast<Window*>(data);
+            // Named once per app_id: finding the desktop file reads the disk.
+            if (window->appId != window->pendingAppId) {
+                window->appId   = window->pendingAppId;
+                window->program = window->appId.empty() ? std::string() : gnomeProgramName(window->appId);
+            }
             window->activated = window->pendingActivated;
         }
         static void closed(void* data, zwlr_foreign_toplevel_handle_v1*) {
@@ -56,12 +62,22 @@ namespace ngosen {
             zwlr_foreign_toplevel_handle_v1_destroy(window->handle);
     }
 
-    std::string Toplevels::activeApp() const {
+    const Toplevels::Window* Toplevels::activeWindow() const {
         for (const auto& window : windows_) {
             if (window->activated)
-                return window->appId;
+                return window.get();
         }
-        return {};
+        return nullptr;
+    }
+
+    std::string Toplevels::activeAppId() const {
+        const Window* window = activeWindow();
+        return window != nullptr ? window->appId : std::string();
+    }
+
+    std::string Toplevels::activeProgram() const {
+        const Window* window = activeWindow();
+        return window != nullptr ? window->program : std::string();
     }
 
     void Toplevels::addWindow(zwlr_foreign_toplevel_handle_v1* handle) {

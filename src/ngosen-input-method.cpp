@@ -172,8 +172,12 @@ namespace ngosen {
         }
     }
 
-    std::string InputMethod::activeApp() const {
-        return toplevels_ ? toplevels_->activeApp() : std::string();
+    std::string InputMethod::activeAppId() const {
+        return toplevels_ ? toplevels_->activeAppId() : std::string();
+    }
+
+    std::string InputMethod::activeProgram() const {
+        return toplevels_ ? toplevels_->activeProgram() : std::string();
     }
 
     InputMethod::Connection InputMethod::connect() {

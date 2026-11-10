@@ -66,7 +66,7 @@ namespace ngosen {
             }
 
             std::string currentApp() const {
-                return modeAppName(im.activeApp());
+                return modeAppName(im.activeProgram());
             }
 
             // As the IBus edition: the toggle key's last choice in the app decides the language, else

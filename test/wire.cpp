@@ -77,7 +77,8 @@ namespace {
             fs::create_directories(fs::path(home) / ".config/ngosen");
             std::ofstream(fs::path(home) / ".config/ngosen/ngosen.conf") << settings;
         }
-        compositor.start(program, home, {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY});
+        // Flatpak exports in the test home only, so the host's installed apps cannot rename one.
+        compositor.start(program, home, {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY, "XDG_DATA_DIRS=" + home + "/flatpak/exports/share"});
         return compositor.waitFor([&] { return compositor.hasClient() && compositor.logged("vk.create"); });
     }
 
@@ -587,6 +588,20 @@ namespace {
             check(nextField(compositor, "kate"), "kate again", &compositor);
             type(compositor, {KeyA, KeyA, KeySpace});
             check(fieldShows(compositor, "aa "), "the app switched to English stays in English", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            writeConfig("app-flatpak", "ngosen-app-rules.conf", "firefox=5\n");
+            const fs::path exports = root / "app-flatpak/flatpak/exports/share/applications";
+            fs::create_directories(exports);
+            std::ofstream(exports / "org.mozilla.firefox.desktop") << "[Desktop Entry]\nName=Firefox\nStartupWMClass=firefox\n";
+            check(begin(compositor, "app-flatpak", "", Language::Vietnamese), "setup for a Flatpak app", &compositor);
+            compositor.openToplevel("org.mozilla.firefox", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a Flatpak app", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào ") && compositor.count("im.preedit c") > 0, "a Flatpak app keeps the mode picked for it by its usual name", &compositor);
             compositor.stop();
         }
         {

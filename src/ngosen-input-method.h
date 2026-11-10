@@ -117,8 +117,10 @@ namespace ngosen {
         zwlr_foreign_toplevel_manager_v1* toplevelManager() const {
             return toplevelManager_;
         }
-        // app_id of the focused window; empty without wlr-foreign-toplevel-management.
-        std::string activeApp() const;
+        // The focused window's app_id, and its app named as the IBus edition names it; empty without
+        // wlr-foreign-toplevel-management.
+        std::string activeAppId() const;
+        std::string activeProgram() const;
 
         // False when nothing may go to the field: it is not focused, or a focus change is waiting.
         bool maySend();
