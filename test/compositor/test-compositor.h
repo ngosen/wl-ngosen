@@ -5,7 +5,9 @@
  */
 #pragma once
 
+#include <chrono>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <string>
 #include <sys/types.h>
@@ -14,6 +16,10 @@
 struct wl_display;
 struct wl_resource;
 struct wl_global;
+struct wl_event_source;
+struct xkb_context;
+struct xkb_keymap;
+struct xkb_state;
 
 namespace test {
 
@@ -68,6 +74,23 @@ namespace test {
             return dones_;
         }
         void unavailable();
+
+        // A text field that behaves as an app's: it applies what the input method commits and the
+        // keys the virtual keyboard sends, and reports its text back if it reports surrounding text.
+        // Opening it activates the input method. Offsets are bytes, as on the wire.
+        void openField(const std::string& text, bool reports = true);
+        // Reports arrive this late, as from an app that answers after a round trip of its own.
+        void setReplyDelay(int ms) {
+            replyDelayMs_ = ms;
+        }
+        // The app moves the cursor itself, as on a click, and says so with cause other.
+        void               moveCursor(uint32_t cursor);
+        const std::string& fieldText() const {
+            return field_.text;
+        }
+        const std::string& fieldPreedit() const {
+            return field_.preedit;
+        }
         void removeInputMethodGlobal();
 
         // Events of the keyboard grab. Codes are evdev codes.
@@ -128,6 +151,39 @@ namespace test {
 
         void                     sendToplevel(wl_resource* manager, Toplevel& toplevel);
         void                     sendToplevelState(Toplevel& toplevel);
+
+        struct Field {
+            bool        open    = false;
+            bool        reports = true;
+            std::string text;
+            uint32_t    cursor = 0;
+            std::string preedit;
+            // What the input method asked for since its last commit.
+            uint32_t    deleteBefore = 0, deleteAfter = 0;
+            std::string commitText;
+            std::string nextPreedit;
+        };
+        Field        field_;
+        int          replyDelayMs_ = 0;
+        xkb_state*   vkState_      = nullptr;
+        xkb_keymap*  vkKeymap_     = nullptr;
+        xkb_context* xkb_          = nullptr;
+        struct LateReport {
+            std::string                           text;
+            uint32_t                              cursor;
+            uint32_t                              cause;
+            std::chrono::steady_clock::time_point due;
+        };
+        // One timer for every pending report, so the destructor can free what is still waiting.
+        std::deque<LateReport> lateReports_;
+        wl_event_source*       lateTimer_ = nullptr;
+
+        void                   sendLateReports();
+        void                   fieldCommit();
+        void                   fieldKey(uint32_t code, bool pressed);
+        void                   fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
+        void                   reportField(uint32_t cause);
+        void                   sendReport(const std::string& text, uint32_t cursor, uint32_t cause);
     };
 
 } // namespace test

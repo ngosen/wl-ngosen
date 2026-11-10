@@ -83,15 +83,23 @@ namespace test {
         // Input method.
         void imCommitString(wl_client*, wl_resource* resource, const char* text) {
             of(resource)->note(std::string("im.commit_string ") + text);
+            of(resource)->field_.commitText = text;
         }
         void imSetPreedit(wl_client*, wl_resource* resource, const char* text, int32_t begin, int32_t end) {
             of(resource)->note(std::string("im.preedit ") + text + " " + std::to_string(begin) + " " + std::to_string(end));
+            of(resource)->field_.nextPreedit = text;
         }
         void imDelete(wl_client*, wl_resource* resource, uint32_t before, uint32_t after) {
             of(resource)->note("im.delete " + std::to_string(before) + " " + std::to_string(after));
+            of(resource)->field_.deleteBefore = before;
+            of(resource)->field_.deleteAfter  = after;
         }
         void imCommit(wl_client*, wl_resource* resource, uint32_t serial) {
             of(resource)->note("im.commit " + std::to_string(serial));
+            // A compositor may drop a commit that names an old done; the field model applies it but says so.
+            if (serial != of(resource)->dones_)
+                of(resource)->note("stale commit " + std::to_string(serial) + " of " + std::to_string(of(resource)->dones_));
+            of(resource)->fieldCommit();
         }
         void imPopup(wl_client*, wl_resource*, uint32_t, wl_resource*) {}
         void imGrab(wl_client* client, wl_resource* resource, uint32_t id) {
@@ -143,9 +151,11 @@ namespace test {
         }
         void vkKey(wl_client*, wl_resource* resource, uint32_t /*time*/, uint32_t key, uint32_t state) {
             of(resource)->note("vk.key " + std::to_string(key) + " " + std::to_string(state));
+            of(resource)->fieldKey(key, state == WL_KEYBOARD_KEY_STATE_PRESSED);
         }
         void vkModifiers(wl_client*, wl_resource* resource, uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
             of(resource)->note("vk.mods " + std::to_string(depressed) + " " + std::to_string(latched) + " " + std::to_string(locked) + " " + std::to_string(group));
+            of(resource)->fieldModifiers(depressed, latched, locked, group);
         }
         void vkDestroy(wl_client*, wl_resource* resource) {
             of(resource)->note("vk.destroy");
@@ -217,6 +227,14 @@ namespace test {
 
     TestCompositor::~TestCompositor() {
         stop();
+        if (vkState_ != nullptr)
+            xkb_state_unref(vkState_);
+        if (vkKeymap_ != nullptr)
+            xkb_keymap_unref(vkKeymap_);
+        if (xkb_ != nullptr)
+            xkb_context_unref(xkb_);
+        if (lateTimer_ != nullptr)
+            wl_event_source_remove(lateTimer_);
         wl_display_destroy_clients(display_);
         wl_display_destroy(display_);
         std::string command = "rm -rf '" + runtimeDir_ + "'";
@@ -307,6 +325,7 @@ namespace test {
         zwp_input_method_v2_send_activate(im_);
     }
     void TestCompositor::deactivate() {
+        field_.open = false;
         zwp_input_method_v2_send_deactivate(im_);
     }
     void TestCompositor::surrounding(const std::string& text, uint32_t cursor, uint32_t anchor) {
@@ -465,6 +484,131 @@ namespace test {
     void TestCompositor::dump() const {
         for (const auto& line : log_)
             std::cout << "    " << line << '\n';
+    }
+
+    void TestCompositor::openField(const std::string& text, bool reports) {
+        if (vkState_ == nullptr) {
+            xkb_            = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+            const auto keys = keymapFor(options_.layout);
+            vkKeymap_       = xkb_keymap_new_from_string(xkb_, keys.c_str(), XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+            vkState_        = xkb_state_new(vkKeymap_);
+        }
+        field_         = Field{};
+        field_.open    = true;
+        field_.reports = reports;
+        field_.text    = text;
+        field_.cursor  = static_cast<uint32_t>(text.size());
+        activate();
+        if (reports)
+            surrounding(field_.text, field_.cursor, field_.cursor);
+        cause(0);
+        contentType(0, 0);
+        done();
+    }
+
+    void TestCompositor::moveCursor(uint32_t cursor) {
+        field_.cursor = std::min<uint32_t>(cursor, static_cast<uint32_t>(field_.text.size()));
+        reportField(1);
+        run(0);
+    }
+
+    // As text-input-v3 applies a commit: delete around the cursor, insert the commit string at the
+    // cursor, then show the new preedit; a commit without one clears it.
+    void TestCompositor::fieldCommit() {
+        if (!field_.open)
+            return;
+        const uint32_t start = field_.cursor >= field_.deleteBefore ? field_.cursor - field_.deleteBefore : 0;
+        const uint32_t end   = std::min<uint32_t>(field_.cursor + field_.deleteAfter, static_cast<uint32_t>(field_.text.size()));
+        field_.text.erase(start, end - start);
+        field_.cursor = start;
+        field_.text.insert(field_.cursor, field_.commitText);
+        field_.cursor += static_cast<uint32_t>(field_.commitText.size());
+        field_.preedit      = field_.nextPreedit;
+        const bool changed  = field_.deleteBefore != 0 || field_.deleteAfter != 0 || !field_.commitText.empty();
+        field_.deleteBefore = field_.deleteAfter = 0;
+        field_.commitText.clear();
+        field_.nextPreedit.clear();
+        if (changed)
+            reportField(0);
+    }
+
+    // The app types what the key gives with the virtual keyboard's modifiers.
+    void TestCompositor::fieldKey(uint32_t code, bool pressed) {
+        if (!field_.open || vkState_ == nullptr || !pressed)
+            return;
+        const xkb_keysym_t sym = xkb_state_key_get_one_sym(vkState_, code + 8);
+        if (sym == XKB_KEY_BackSpace) {
+            if (field_.cursor == 0)
+                return;
+            uint32_t at = field_.cursor - 1;
+            while (at > 0 && (static_cast<unsigned char>(field_.text[at]) & 0xC0) == 0x80)
+                --at;
+            field_.text.erase(at, field_.cursor - at);
+            field_.cursor = at;
+        } else {
+            std::string typed = sym == XKB_KEY_Return ? "\n" : "";
+            if (typed.empty()) {
+                char buf[16];
+                if (xkb_state_key_get_utf8(vkState_, code + 8, buf, sizeof(buf)) <= 0)
+                    return;
+                typed = buf;
+                if (static_cast<unsigned char>(typed[0]) < 0x20 || typed[0] == 0x7f)
+                    return;
+            }
+            field_.text.insert(field_.cursor, typed);
+            field_.cursor += static_cast<uint32_t>(typed.size());
+        }
+        reportField(1);
+    }
+
+    void TestCompositor::fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
+        if (vkState_ != nullptr)
+            xkb_state_update_mask(vkState_, depressed, latched, locked, 0, 0, group);
+    }
+
+    void TestCompositor::reportField(uint32_t cause) {
+        if (!field_.reports)
+            return;
+        if (replyDelayMs_ <= 0) {
+            sendReport(field_.text, field_.cursor, cause);
+            return;
+        }
+        // Sent as the field was when it changed, so a late report can be stale by the time it lands.
+        const auto due = std::chrono::steady_clock::now() + std::chrono::milliseconds(replyDelayMs_);
+        lateReports_.push_back({field_.text, field_.cursor, cause, due});
+        if (lateTimer_ == nullptr) {
+            lateTimer_ = wl_event_loop_add_timer(
+                wl_display_get_event_loop(display_),
+                [](void* data) {
+                    static_cast<TestCompositor*>(data)->sendLateReports();
+                    return 0;
+                },
+                this);
+        }
+        if (lateReports_.size() == 1)
+            wl_event_source_timer_update(lateTimer_, replyDelayMs_);
+    }
+
+    void TestCompositor::sendLateReports() {
+        const auto now = std::chrono::steady_clock::now();
+        while (!lateReports_.empty() && lateReports_.front().due <= now) {
+            const LateReport report = lateReports_.front();
+            lateReports_.pop_front();
+            sendReport(report.text, report.cursor, report.cause);
+        }
+        if (!lateReports_.empty()) {
+            const auto wait = std::chrono::duration_cast<std::chrono::milliseconds>(lateReports_.front().due - now).count();
+            wl_event_source_timer_update(lateTimer_, static_cast<int>(std::max<long long>(wait, 1)));
+        }
+    }
+
+    void TestCompositor::sendReport(const std::string& text, uint32_t cursor, uint32_t cause) {
+        if (im_ == nullptr)
+            return;
+        note("field " + text + "|" + std::to_string(cursor));
+        surrounding(text, cursor, cursor);
+        this->cause(cause);
+        done(false);
     }
 
 } // namespace test

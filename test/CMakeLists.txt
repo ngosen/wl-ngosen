@@ -18,6 +18,11 @@ target_link_libraries(toggle-key-test PRIVATE ngosen_wayland)
 add_test(NAME toggle_key COMMAND toggle-key-test)
 set_tests_properties(toggle_key PROPERTIES LABELS "unit")
 
+add_executable(key-test key.cpp)
+target_link_libraries(key-test PRIVATE ngosen_wayland)
+add_test(NAME key COMMAND key-test)
+set_tests_properties(key PROPERTIES LABELS "unit")
+
 # Run with --update to accept a change to the expected files after reading the diff.
 add_executable(golden-test golden.cpp)
 target_link_libraries(golden-test PRIVATE ngosen_shared)
