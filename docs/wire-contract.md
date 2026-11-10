@@ -58,7 +58,7 @@ Nothing is sent while inactive or after a pending `deactivate` was read; the cal
 
 | Host call | Wire |
 | --- | --- |
-| `commitText` | gathered for im `commit_string` |
+| `commitText` | gathered for im `commit_string`; an empty one is sent as `commit_string("")`, which makes Firefox over GTK 3 report a new copy |
 | `showPreedit` / `clearPreedit` + `refreshPreedit` | gathered for im `set_preedit_string`, cursor at the end in bytes |
 | `deleteSurrounding(offset, size)` | as fcitx5: only a range that holds the cursor (`offset <= 0 <= offset + size`) can be sent; characters → bytes against the last surrounding text, gathered for `delete_surrounding_text(before, after)`. Anything else, or no valid surrounding text, is dropped and logged. |
 | `forwardKey`, `forwardKeyPress` | vk `key` with the evdev code; modifiers as below |

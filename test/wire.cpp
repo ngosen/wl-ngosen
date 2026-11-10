@@ -497,6 +497,22 @@ namespace {
         }
         {
             TestCompositor compositor({});
+            check(begin(compositor, "sen-old-copy", "", Language::Vietnamese), "setup for Firefox in Sen", &compositor);
+            compositor.setOldCopyAfterEdit(true);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for Firefox in Sen", &compositor);
+            for (uint32_t key : {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace}) {
+                compositor.tap(key);
+                compositor.runFor(30);
+            }
+            check(fieldShows(compositor, "Xin việt "), "Firefox gets the word", &compositor);
+            check(compositor.logged("im.commit_string "), "the core asks Firefox for a report with an empty commit", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyBackspace) + " ") == 0, "no BackSpace goes to Firefox after an edit", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
             check(begin(compositor, "sen-capital", "", Language::Vietnamese), "setup for a capital in Sen", &compositor);
             compositor.openField("", false);
             check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a capital in Sen", &compositor);

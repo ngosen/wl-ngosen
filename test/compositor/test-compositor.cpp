@@ -83,7 +83,8 @@ namespace test {
         // Input method.
         void imCommitString(wl_client*, wl_resource* resource, const char* text) {
             of(resource)->note(std::string("im.commit_string ") + text);
-            of(resource)->field_.commitText = text;
+            of(resource)->field_.commitText      = text;
+            of(resource)->field_.gotCommitString = true;
         }
         void imSetPreedit(wl_client*, wl_resource* resource, const char* text, int32_t begin, int32_t end) {
             of(resource)->note(std::string("im.preedit ") + text + " " + std::to_string(begin) + " " + std::to_string(end));
@@ -536,8 +537,12 @@ namespace test {
     void TestCompositor::fieldCommit() {
         if (!field_.open)
             return;
-        const uint32_t start = field_.cursor >= field_.deleteBefore ? field_.cursor - field_.deleteBefore : 0;
-        const uint32_t end   = std::min<uint32_t>(field_.cursor + field_.deleteAfter, static_cast<uint32_t>(field_.text.size()));
+        const std::string oldText   = field_.text;
+        const uint32_t    oldCursor = field_.cursor;
+        const bool        asked     = field_.gotCommitString;
+        field_.gotCommitString      = false;
+        const uint32_t start        = field_.cursor >= field_.deleteBefore ? field_.cursor - field_.deleteBefore : 0;
+        const uint32_t end          = std::min<uint32_t>(field_.cursor + field_.deleteAfter, static_cast<uint32_t>(field_.text.size()));
         field_.text.erase(start, end - start);
         field_.cursor = start;
         field_.text.insert(field_.cursor, field_.commitText);
@@ -547,7 +552,15 @@ namespace test {
         field_.deleteBefore = field_.deleteAfter = 0;
         field_.commitText.clear();
         field_.nextPreedit.clear();
-        if (changed)
+        if (oldCopyAfterEdit_ && changed) {
+            field_.showsOldCopy = true;
+            if (field_.reports)
+                sendReport(oldText, oldCursor, 0);
+            return;
+        }
+        if (field_.showsOldCopy && asked)
+            field_.showsOldCopy = false;
+        if (changed || asked)
             reportField(0);
     }
 
@@ -577,7 +590,8 @@ namespace test {
             field_.text.insert(field_.cursor, typed);
             field_.cursor += static_cast<uint32_t>(typed.size());
         }
-        reportField(1);
+        if (!field_.showsOldCopy)
+            reportField(1);
     }
 
     void TestCompositor::fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {

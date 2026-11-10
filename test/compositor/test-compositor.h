@@ -88,6 +88,11 @@ namespace test {
         void setReportsOnCommit(bool on) {
             reportsOnCommit_ = on;
         }
+        // After an edit the field reports its old text and then stays quiet, keys included, until a
+        // commit carries a commit_string, as Firefox over GTK 3 does.
+        void setOldCopyAfterEdit(bool on) {
+            oldCopyAfterEdit_ = on;
+        }
         // The app moves the cursor itself, as on a click, and says so with cause other.
         void               moveCursor(uint32_t cursor);
         const std::string& fieldText() const {
@@ -167,17 +172,20 @@ namespace test {
             // What the input method asked for since its last commit.
             uint32_t    deleteBefore = 0, deleteAfter = 0;
             std::string commitText;
+            bool        gotCommitString = false;
             std::string nextPreedit;
+            bool        showsOldCopy = false;
         };
         Field        field_;
-        int          replyDelayMs_    = 0;
-        bool         reportsOnCommit_ = false;
-        bool         owedReport_      = false;
-        bool         awaitingAnswer_  = false; // a report went out and no commit answered it yet
-        uint32_t     owedCause_       = 0;
-        xkb_state*   vkState_         = nullptr;
-        xkb_keymap*  vkKeymap_        = nullptr;
-        xkb_context* xkb_             = nullptr;
+        int          replyDelayMs_     = 0;
+        bool         reportsOnCommit_  = false;
+        bool         oldCopyAfterEdit_ = false;
+        bool         owedReport_       = false;
+        bool         awaitingAnswer_   = false; // a report went out and no commit answered it yet
+        uint32_t     owedCause_        = 0;
+        xkb_state*   vkState_          = nullptr;
+        xkb_keymap*  vkKeymap_         = nullptr;
+        xkb_context* xkb_              = nullptr;
         struct LateReport {
             std::string                           text;
             uint32_t                              cursor;
