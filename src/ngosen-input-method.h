@@ -47,7 +47,9 @@ namespace ngosen {
             Modifiers,
             Keymap,
             RepeatInfo,
-            Unavailable
+            Unavailable,
+            // The keymap cannot be used; typing would swallow every key.
+            KeymapFailed
         } kind;
         WaylandField field;         // Done
         uint32_t     time      = 0; // Key
@@ -68,9 +70,14 @@ namespace ngosen {
         InputMethod(const InputMethod&)            = delete;
         InputMethod& operator=(const InputMethod&) = delete;
 
-        // False when the compositor offers no input method (GNOME, KDE) or no virtual keyboard.
-        bool connect();
-        int  fd() const;
+        enum class Connection {
+            Ready,
+            NotOffered,
+            Failed
+        };
+        // NotOffered: the compositor has no input method (GNOME, KDE) or no virtual keyboard.
+        Connection connect();
+        int        fd() const;
         // Reads what the socket holds without blocking, then runs the Wayland callbacks.
         bool                   readEvents();
         bool                   flush();
@@ -125,6 +132,8 @@ namespace ngosen {
         void shutdown();
 
       private:
+        void        keymapFailed(const std::string& why);
+        void        letGoOfModifiers();
         static void onGlobal(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version);
         static void onGlobalRemove(void* data, wl_registry* registry, uint32_t name);
         void        bindInputMethod();

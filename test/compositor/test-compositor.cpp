@@ -16,6 +16,7 @@
 #include <cstring>
 #include <iostream>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server.h>
@@ -133,6 +134,10 @@ namespace test {
 
         // Virtual keyboard.
         void vkKeymap(wl_client*, wl_resource* resource, uint32_t format, int32_t fd, uint32_t size) {
+            // A compositor maps size bytes; a shorter file faults on the last page.
+            struct stat info{};
+            if (fstat(fd, &info) != 0 || static_cast<uint64_t>(info.st_size) < size)
+                of(resource)->note("error: keymap file shorter than its size");
             ::close(fd);
             of(resource)->note("vk.keymap " + std::to_string(format) + " " + std::to_string(size));
         }
@@ -256,6 +261,15 @@ namespace test {
         return -1;
     }
 
+    void TestCompositor::stopWhileBusy(int busyMs) {
+        if (pid_ <= 0)
+            return;
+        kill(pid_, SIGTERM);
+        usleep(static_cast<useconds_t>(busyMs) * 1000);
+        if (waitExit(2000) < 0)
+            stop();
+    }
+
     void TestCompositor::stop() {
         if (pid_ <= 0)
             return;
@@ -298,10 +312,11 @@ namespace test {
     void TestCompositor::contentType(uint32_t hint, uint32_t purpose) {
         zwp_input_method_v2_send_content_type(im_, hint, purpose);
     }
-    void TestCompositor::done() {
+    void TestCompositor::done(bool send) {
         ++serial_;
         zwp_input_method_v2_send_done(im_);
-        run(0);
+        if (send)
+            run(0);
     }
     void TestCompositor::unavailable() {
         zwp_input_method_v2_send_unavailable(im_);
@@ -322,6 +337,15 @@ namespace test {
         zwp_input_method_keyboard_grab_v2_send_keymap(grab_, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, static_cast<uint32_t>(text.size() + 1));
         ::close(fd);
     }
+    void TestCompositor::sendBrokenKeymap() {
+        if (grab_ == nullptr)
+            return;
+        const std::string text = "xkb_keymap { this is not a keymap };";
+        const int         fd   = memoryFile(text);
+        zwp_input_method_keyboard_grab_v2_send_keymap(grab_, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, static_cast<uint32_t>(text.size() + 1));
+        ::close(fd);
+        run(0);
+    }
     void TestCompositor::sendEmptyKeymap() {
         // Without a grab a compositor sends keys to the app, not to the input method.
         if (grab_ == nullptr)
@@ -330,12 +354,13 @@ namespace test {
         zwp_input_method_keyboard_grab_v2_send_keymap(grab_, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, 0);
         ::close(fd);
     }
-    void TestCompositor::key(uint32_t code, bool pressed) {
+    void TestCompositor::key(uint32_t code, bool pressed, bool send) {
         // Without a grab a compositor sends keys to the app, not to the input method.
         if (grab_ == nullptr)
             return;
         zwp_input_method_keyboard_grab_v2_send_key(grab_, ++serial_, time_ += 10, code, pressed ? WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED);
-        run(0);
+        if (send)
+            run(0);
     }
     void TestCompositor::tap(uint32_t code) {
         key(code, true);

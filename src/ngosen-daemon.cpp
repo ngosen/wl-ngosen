@@ -35,6 +35,10 @@ namespace ngosen {
                         status = 1;
                         g_main_loop_quit(loop);
                         break;
+                    case ImEvent::Kind::KeymapFailed:
+                        status = 1;
+                        g_main_loop_quit(loop);
+                        break;
                     default: break;
                 }
             }
@@ -93,8 +97,11 @@ namespace ngosen {
 
     int runDaemon() {
         Daemon daemon;
-        if (!daemon.im.connect())
-            return 0;
+        switch (daemon.im.connect()) {
+            case InputMethod::Connection::NotOffered: return 0;
+            case InputMethod::Connection::Failed: return 1;
+            case InputMethod::Connection::Ready: break;
+        }
         daemon.loop    = g_main_loop_new(nullptr, FALSE);
         auto* source   = reinterpret_cast<WaylandSource*>(g_source_new(&sourceFuncs, sizeof(WaylandSource)));
         source->daemon = &daemon;

@@ -10,6 +10,7 @@
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <poll.h>
@@ -24,14 +25,16 @@ namespace ngosen {
         constexpr uint32_t SeatVersion     = 1;
         constexpr uint32_t ToplevelVersion = 3;
 
-        // A file descriptor holding text, as keymap requests take it.
+        // A file descriptor holding text and its NUL, as keymap requests count it: the compositor maps
+        // that many bytes.
         int memoryFile(const std::string& text) {
             const int fd = memfd_create("wl-ngosen-keymap", MFD_CLOEXEC);
             if (fd < 0)
                 return -1;
-            std::size_t done = 0;
-            while (done < text.size()) {
-                const ssize_t n = ::write(fd, text.data() + done, text.size() - done);
+            const std::size_t size = text.size() + 1;
+            std::size_t       done = 0;
+            while (done < size) {
+                const ssize_t n = ::write(fd, text.c_str() + done, size - done);
                 if (n <= 0) {
                     ::close(fd);
                     return -1;
@@ -167,16 +170,19 @@ namespace ngosen {
         }
     }
 
-    bool InputMethod::connect() {
+    InputMethod::Connection InputMethod::connect() {
         display_ = wl_display_connect(nullptr);
         if (display_ == nullptr) {
             NGOSEN_ERROR("Cannot connect to the Wayland compositor");
-            return false;
+            return Connection::Failed;
         }
         static const wl_registry_listener listener = {onGlobal, onGlobalRemove};
         registry_                                  = wl_display_get_registry(display_);
         wl_registry_add_listener(registry_, &listener, this);
-        wl_display_roundtrip(display_);
+        if (wl_display_roundtrip(display_) < 0) {
+            NGOSEN_ERROR("Lost the connection to the compositor");
+            return Connection::Failed;
+        }
         if (seats_ > 1)
             NGOSEN_INFO("The compositor has " + std::to_string(seats_) + " seats; typing on the first one only");
         if (seat_ == nullptr || manager_ == nullptr || vkManager_ == nullptr) {
@@ -184,13 +190,17 @@ namespace ngosen {
                         (seat_ == nullptr        ? "seat" :
                              manager_ == nullptr ? "input method (zwp_input_method_manager_v2)" :
                                                    "virtual keyboard (zwp_virtual_keyboard_manager_v1)"));
-            return false;
+            return Connection::NotOffered;
         }
         context_ = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
         im_      = zwp_input_method_manager_v2_get_input_method(manager_, seat_);
         zwp_input_method_v2_add_listener(im_, &imListener, this);
         vk_ = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(vkManager_, seat_);
-        return wl_display_roundtrip(display_) >= 0;
+        if (wl_display_roundtrip(display_) < 0) {
+            NGOSEN_ERROR("Lost the connection to the compositor");
+            return Connection::Failed;
+        }
+        return Connection::Ready;
     }
 
     int InputMethod::fd() const {
@@ -274,7 +284,13 @@ namespace ngosen {
     }
 
     void InputMethod::ungrab(uint32_t time) {
+        // Keys read along with the focus change belong to the old grab; the app gets the next ones
+        // itself, so a press typed now would never see its release.
+        events_.erase(
+            std::remove_if(events_.begin(), events_.end(), [](const ImEvent& event) { return event.kind == ImEvent::Kind::Key || event.kind == ImEvent::Kind::Modifiers; }),
+            events_.end());
         releasePressedKeys(time);
+        letGoOfModifiers();
         if (grab_ != nullptr) {
             zwp_input_method_keyboard_grab_v2_release(grab_);
             grab_ = nullptr;
@@ -289,8 +305,10 @@ namespace ngosen {
         }
         void* map = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
         ::close(fd);
-        if (map == MAP_FAILED)
+        if (map == MAP_FAILED) {
+            keymapFailed("Cannot map the keymap from the compositor");
             return;
+        }
         // The size counts the terminating NUL.
         std::string text(static_cast<const char*>(map), strnlen(static_cast<const char*>(map), size));
         munmap(map, size);
@@ -298,7 +316,7 @@ namespace ngosen {
             return;
         xkb_keymap* keymap = xkb_keymap_new_from_string(context_, text.c_str(), XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
         if (keymap == nullptr) {
-            NGOSEN_WARN("Cannot read the keymap from the compositor");
+            keymapFailed("Cannot read the keymap from the compositor");
             return;
         }
         if (state_ != nullptr)
@@ -311,12 +329,27 @@ namespace ngosen {
         xkb_state_update_mask(state_, depressed_, latched_, locked_, 0, 0, group_);
         // The virtual keyboard types with the same keymap, set before any key it sends.
         const int copy = memoryFile(keymapText_);
-        if (copy >= 0) {
-            zwp_virtual_keyboard_v1_keymap(vk_, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, copy, static_cast<uint32_t>(keymapText_.size() + 1));
-            ::close(copy);
-            vkHasKeymap_ = true;
+        if (copy < 0) {
+            keymapFailed("Cannot hand the keymap to the virtual keyboard");
+            return;
         }
+        zwp_virtual_keyboard_v1_keymap(vk_, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, copy, static_cast<uint32_t>(keymapText_.size() + 1));
+        ::close(copy);
+        vkHasKeymap_ = true;
         NGOSEN_DEBUG("Keymap of " + std::to_string(keymapText_.size()) + " bytes");
+    }
+
+    void InputMethod::keymapFailed(const std::string& why) {
+        NGOSEN_ERROR(why);
+        // The grab would swallow every key with nothing to type them with.
+        events_.push_back(ImEvent{ImEvent::Kind::KeymapFailed});
+    }
+
+    void InputMethod::letGoOfModifiers() {
+        // Modifiers still held belong to the physical keyboard now; locks such as Caps Lock stay.
+        depressed_ = latched_ = 0;
+        if (vkHasKeymap_)
+            zwp_virtual_keyboard_v1_modifiers(vk_, 0, 0, locked_, group_);
     }
 
     bool InputMethod::maySend() {
@@ -404,7 +437,7 @@ namespace ngosen {
             return;
         if (im_ != nullptr && !globalLost_) {
             releasePressedKeys(0);
-            sendModifiers(0);
+            letGoOfModifiers();
         }
         if (grab_ != nullptr)
             zwp_input_method_keyboard_grab_v2_release(grab_);
@@ -415,6 +448,10 @@ namespace ngosen {
         grab_ = nullptr;
         vk_   = nullptr;
         im_   = nullptr;
+        // A compositor drops what it has not read once the socket closes, and a release lost there
+        // leaves the key held in the app.
+        if (!globalLost_)
+            wl_display_roundtrip(display_);
         wl_display_flush(display_);
         wl_display_disconnect(display_);
         display_ = nullptr;

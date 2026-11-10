@@ -184,6 +184,58 @@ namespace {
         }
     }
 
+    void testReviewCases() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "keymap-size") && focus(compositor), "setup for the keymap size", &compositor);
+            check(compositor.count("error:") == 0, "the virtual keyboard's keymap file is as long as its size says", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor::Options options;
+            options.keymapOnGrab = false;
+            TestCompositor compositor(options);
+            check(begin(compositor, "broken-keymap-first"), "setup for a broken first keymap", &compositor);
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "the grab comes before the broken keymap", &compositor);
+            compositor.sendBrokenKeymap();
+            // Holding the grab with no keymap to type with would swallow every key.
+            check(compositor.waitExit(3000) == 1, "a keymap the daemon cannot read ends it with status 1", &compositor);
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "keys-behind-deactivate") && focus(compositor), "setup for keys behind a deactivate", &compositor);
+            compositor.clearLog();
+            compositor.deactivate();
+            compositor.done(false);
+            compositor.key(KeyA, true, false);
+            compositor.run(0);
+            check(compositor.waitFor([&] { return compositor.logged("grab.release"); }), "the grab goes with the field", &compositor);
+            compositor.run(100);
+            check(compositor.count("vk.key ") == 0, "a key read with the deactivate is not typed after the grab is gone", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "mods-on-deactivate") && focus(compositor), "setup for modifiers on deactivate", &compositor);
+            compositor.key(KeyLeftShift, true);
+            compositor.modifiers(1, 0, 2, 0);
+            check(compositor.waitFor([&] { return compositor.logged("vk.mods 1 0 2 0"); }), "shift and caps lock reach the virtual keyboard", &compositor);
+            compositor.deactivate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.logged("grab.release"); }), "the grab goes with the field", &compositor);
+            const auto mods = compositor.lines("vk.mods ");
+            check(!mods.empty() && mods.back() == "vk.mods 0 0 2 0", "shift is let go on deactivate, caps lock stays", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            compositor.start(program, freshHome("no-compositor"), {"WAYLAND_DISPLAY=wl-ngosen-missing"});
+            check(compositor.waitExit(3000) == 1, "no compositor to connect to ends the daemon with status 1", &compositor);
+        }
+    }
+
     void testExits() {
         {
             TestCompositor::Options options;
@@ -217,7 +269,8 @@ namespace {
             check(begin(compositor, "signal") && focus(compositor), "setup for SIGTERM", &compositor);
             compositor.key(KeyA, true);
             check(compositor.waitFor([&] { return compositor.logged("vk.key 30 1"); }), "the press passes before SIGTERM", &compositor);
-            compositor.stop();
+            // The daemon's last requests must still arrive when the compositor reads them late.
+            compositor.stopWhileBusy(300);
             check(compositor.logged("vk.key 30 0"), "a held key is let go when the daemon stops", &compositor);
             check(balanced(compositor), "every press has its release", &compositor);
         }
@@ -242,6 +295,7 @@ int main(int argc, char** argv) {
     testReleaseOnDeactivate();
     testKeymaps();
     testExits();
+    testReviewCases();
     fs::remove_all(root);
     if (failures == 0)
         std::cout << "all wire checks passed\n";

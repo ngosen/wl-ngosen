@@ -38,8 +38,10 @@ namespace test {
         // Starts wl-ngosen on this compositor's socket with a home of its own.
         void start(const std::string& program, const std::string& home, const std::vector<std::string>& env = {});
         // The daemon's exit status, or -1 if it is still running after waitMs.
-        int   waitExit(int waitMs);
-        void  stop();
+        int  waitExit(int waitMs);
+        void stop();
+        // Stops the daemon while this compositor reads nothing for busyMs, as a busy compositor does.
+        void  stopWhileBusy(int busyMs);
         pid_t pid() const {
             return pid_;
         }
@@ -57,7 +59,8 @@ namespace test {
         void surrounding(const std::string& text, uint32_t cursor, uint32_t anchor);
         void cause(uint32_t cause);
         void contentType(uint32_t hint, uint32_t purpose);
-        void done();
+        // send false keeps the event queued, so the daemon reads it with what follows.
+        void done(bool send = true);
         void unavailable();
         void removeInputMethodGlobal();
 
@@ -67,7 +70,8 @@ namespace test {
         }
         void sendKeymap(const std::string& layout);
         void sendEmptyKeymap();
-        void key(uint32_t code, bool pressed);
+        void sendBrokenKeymap();
+        void key(uint32_t code, bool pressed, bool send = true);
         void tap(uint32_t code);
         void modifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
         void repeatInfo(int32_t rate, int32_t delay);
