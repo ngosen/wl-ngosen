@@ -171,10 +171,18 @@ namespace ngosen {
             }
 
             void repeatOnce() {
+                const guint mine = repeat.source;
                 // A release or focus change may wait unread in the socket; it ends the repeat first.
-                im.readEvents();
+                if (!im.readEvents()) {
+                    NGOSEN_WARN("Lost the connection to the compositor");
+                    stopRepeat();
+                    status = 1;
+                    g_main_loop_quit(loop);
+                    return;
+                }
                 drain();
-                if (repeat.code == 0 || !g_main_loop_is_running(loop))
+                // A key pressed in what was just read starts its own repeat, which waits for its delay.
+                if (repeat.source != mine || repeat.code == 0 || !g_main_loop_is_running(loop))
                     return;
                 if (!im.field().active) {
                     stopRepeat();
