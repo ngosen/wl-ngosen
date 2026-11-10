@@ -7,6 +7,7 @@
 
 #include "ngosen-ibus-config.h"
 #include "ngosen-ibus-resources.h"
+#include "ngosen-keysym.h"
 #include "ngosen-input-method.h"
 #include "ngosen-log.h"
 #include "ngosen-masks.h"
@@ -16,6 +17,7 @@
 #include "ngosen-wayland-host.h"
 #include "ngosen-wayland-key.h"
 
+#include <algorithm>
 #include <glib-unix.h>
 #include <glib.h>
 #include <signal.h>
@@ -39,8 +41,14 @@ namespace ngosen {
             bool       englishOn = readEnglishOn(resources.paths());
             GMainLoop* loop      = nullptr;
             int        status    = 0;
+            // The held key. The grab sends a key once; as in fcitx5, the input method repeats it.
+            struct {
+                uint32_t code   = 0;
+                uint32_t time   = 0;
+                guint    source = 0;
+            } repeat;
 
-            void       start() {
+            void start() {
                 auto wayland     = std::make_unique<WaylandHost>(im);
                 host             = wayland.get();
                 host->afterTimer = [this] {
@@ -104,6 +112,7 @@ namespace ngosen {
             // As the IBus edition's focus-out: what the core held for the field is dropped, since
             // nothing may reach it now, and above all not the next field.
             void focusOut() {
+                stopRepeat();
                 toggle.reset();
                 state->resetAfterAppCommit(true);
                 state->forgetKeysWhileOff();
@@ -126,7 +135,63 @@ namespace ngosen {
                 im.sendKey(event.time, event.code, event.pressed);
             }
 
-            void handleKey(const ImEvent& event) {
+            void stopRepeat() {
+                if (repeat.source != 0)
+                    g_source_remove(repeat.source);
+                repeat.source = 0;
+                repeat.code   = 0;
+            }
+
+            void startRepeat(const ImEvent& event) {
+                stopRepeat();
+                if (im.repeatRate() <= 0 || !im.keyRepeats(event.code))
+                    return;
+                const auto delay = static_cast<guint>(std::max(im.repeatDelay(), 0));
+                repeat.code      = event.code;
+                repeat.time      = event.time + delay;
+                repeat.source    = g_timeout_add(delay, onRepeatDelay, this);
+            }
+
+            guint repeatInterval() const {
+                return static_cast<guint>(std::max(1000 / std::max(im.repeatRate(), 1), 1));
+            }
+
+            static gboolean onRepeatDelay(gpointer data) {
+                auto* self          = static_cast<Daemon*>(data);
+                self->repeat.source = g_timeout_add(self->repeatInterval(), onRepeat, self);
+                self->repeatOnce();
+                return G_SOURCE_REMOVE;
+            }
+
+            static gboolean onRepeat(gpointer data) {
+                auto* self = static_cast<Daemon*>(data);
+                self->repeat.time += self->repeatInterval();
+                self->repeatOnce();
+                return self->repeat.source != 0 ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE;
+            }
+
+            void repeatOnce() {
+                // A release or focus change may wait unread in the socket; it ends the repeat first.
+                im.readEvents();
+                drain();
+                if (repeat.code == 0 || !g_main_loop_is_running(loop))
+                    return;
+                if (!im.field().active) {
+                    stopRepeat();
+                    return;
+                }
+                ImEvent event{ImEvent::Kind::Key};
+                event.code    = repeat.code;
+                event.time    = repeat.time;
+                event.pressed = true;
+                // As fcitx5: the app gets a release before each repeat, so its own repeat never starts
+                // and a repeat the core takes leaves no key down.
+                im.sendKey(event.time, event.code, false);
+                handleKey(event, true);
+                im.flush();
+            }
+
+            void handleKey(const ImEvent& event, bool repeated = false) {
                 if (!im.field().active)
                     return;
                 applyNewSettings();
@@ -147,7 +212,7 @@ namespace ngosen {
                     return;
                 }
                 host->setKeyTime(event.time);
-                WaylandKeyPress key(sym, event.code, mods, event.time);
+                WaylandKeyPress key(sym, event.code, mods | (repeated ? modifier::Repeat : 0), event.time);
                 state->keyEvent(key);
                 // A key that goes on goes after what the core committed for it.
                 host->flush();
@@ -173,13 +238,25 @@ namespace ngosen {
                     host->flush();
                 }
                 switch (event.kind) {
-                    case ImEvent::Kind::Key: handleKey(event); break;
+                    case ImEvent::Kind::Key:
+                        handleKey(event);
+                        if (event.pressed && im.field().active)
+                            startRepeat(event);
+                        else if (!event.pressed && event.code == repeat.code)
+                            stopRepeat();
+                        break;
+                    case ImEvent::Kind::RepeatInfo:
+                        if (im.repeatRate() <= 0)
+                            stopRepeat();
+                        break;
                     case ImEvent::Kind::Unavailable:
                         NGOSEN_WARN("The compositor gave the input method to another program, or the seat went away");
+                        stopRepeat();
                         status = 1;
                         g_main_loop_quit(loop);
                         break;
                     case ImEvent::Kind::KeymapFailed:
+                        stopRepeat();
                         status = 1;
                         g_main_loop_quit(loop);
                         break;
@@ -256,6 +333,7 @@ namespace ngosen {
         g_unix_signal_add(SIGTERM, onSignal, &daemon);
         NGOSEN_INFO("Typing on Wayland");
         g_main_loop_run(daemon.loop);
+        daemon.stopRepeat();
         g_source_destroy(&source->source);
         g_source_unref(&source->source);
         daemon.im.shutdown();

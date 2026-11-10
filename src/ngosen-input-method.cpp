@@ -387,6 +387,10 @@ namespace ngosen {
             zwp_virtual_keyboard_v1_modifiers(vk_, depressed_ | extra, latched_, locked_, group_);
     }
 
+    bool InputMethod::keyRepeats(uint32_t code) const {
+        return keymap_ != nullptr && xkb_keymap_key_repeats(keymap_, code + 8) != 0;
+    }
+
     void InputMethod::sendKey(uint32_t time, uint32_t code, bool pressed, uint32_t extraMods) {
         // A release whose press the app never got would reach it unmatched.
         if (!vkHasKeymap_ || (!pressed && pressed_.count(code) == 0))

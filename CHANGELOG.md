@@ -19,3 +19,4 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   với bản IBus (#4).
 - Gõ tiếng Việt kiểu Preedit (chữ gạch chân khi đang gõ), dùng chung lõi và cài đặt với bản IBus; ô mật khẩu nhận phím
   nguyên vẹn (#5).
+- Giữ phím thì chữ lặp lại theo tốc độ lặp phím của compositor, cả khi đang gõ chữ tiếng Việt (#6).

@@ -88,8 +88,11 @@ word must not reach the next field. A password or PIN purpose skips the core; ke
 - Modifiers: each vk `modifiers` request carries the latest grab state (depressed, latched, locked,
   group). A key the core sends with Shift gets Shift OR-ed onto that state, and the grab's state is
   sent again right after the key.
-- Repeat: the daemon repeats keys itself from the grab's `repeat_info`, as fcitx5 does. A repeat the
-  core does not take is sent on vk as release then press.
+- Repeat: the grab sends a held key once, so the daemon repeats it from the grab's `repeat_info`, as
+  fcitx5 does. Each repeat first sends the key's release on vk, then goes to the core marked as a
+  repeat; one the core does not take is pressed again on vk. The app's own repeat never starts. Only
+  keys the keymap marks as repeating repeat; rate 0 turns repeat off. The repeat ends on the key's
+  release, another key's press, or focus out.
 - Every vk press is matched by a release. Pressed vk keys are released on deactivate, `unavailable`
   and exit, before the grab is released.
 - A key the core sends that is not in the keymap (`keyText` but no keycode) is committed as text.

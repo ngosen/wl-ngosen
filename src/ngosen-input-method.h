@@ -104,6 +104,8 @@ namespace ngosen {
         int32_t repeatDelay() const {
             return repeatDelay_;
         }
+        // Whether the keymap says the key repeats when held; modifiers do not.
+        bool     keyRepeats(uint32_t code) const;
         uint32_t depressedMods() const {
             return depressed_;
         }

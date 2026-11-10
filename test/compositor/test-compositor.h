@@ -48,6 +48,8 @@ namespace test {
 
         // Runs the event loop until the condition holds, false after timeoutMs.
         bool waitFor(const std::function<bool()>& condition, int timeoutMs = 3000);
+        // Serves the daemon for the whole time; run() returns after the first event.
+        void runFor(int ms);
         void run(int ms);
         bool hasClient() const {
             return im_ != nullptr;

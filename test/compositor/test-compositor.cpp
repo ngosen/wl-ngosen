@@ -287,6 +287,12 @@ namespace test {
         wl_display_flush_clients(display_);
     }
 
+    void TestCompositor::runFor(int ms) {
+        const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+        for (auto now = std::chrono::steady_clock::now(); now < end; now = std::chrono::steady_clock::now())
+            run(static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(end - now).count()) + 1);
+    }
+
     bool TestCompositor::waitFor(const std::function<bool()>& condition, int timeoutMs) {
         const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
         while (!condition()) {
