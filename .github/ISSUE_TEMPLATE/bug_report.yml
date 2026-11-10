@@ -1,0 +1,89 @@
+name: Báo lỗi
+description: Báo lỗi khi gõ bằng Ngó Sen cho Wayland (wl-ngosen).
+labels: ['lỗi']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Form này dành cho `wl-ngosen` trên niri, Sway, Hyprland và các compositor có input-method-v2.
+        App X11 hay Xwayland (như Zalo) không gõ được với bản này; đó là giới hạn đã biết, không phải lỗi.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bạn gặp lỗi gì?
+      description: Ghi đúng các phím đã gõ, kết quả thực tế và kết quả mong đợi.
+      placeholder: |
+        Phím đã gõ: tieengs vieetj
+        Kết quả thực tế:
+        Kết quả mong đợi: tiếng việt
+    validations:
+      required: true
+
+  - type: input
+    id: app
+    attributes:
+      label: App gặp lỗi
+      description: Ghi tên app, version và cách cài (Flatpak, gói của distro, AppImage). Nếu là trang web, ghi trình duyệt và trang web.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Cách gõ
+      description: Xem ở menu khay của Ngó Sen.
+      options:
+        - Gõ Sen (mặc định)
+        - Gạch chân
+        - Không rõ
+    validations:
+      required: true
+
+  - type: input
+    id: compositor
+    attributes:
+      label: Compositor và version
+      placeholder: niri 26.04, Sway 1.11, Hyprland 0.52, ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version wl-ngosen
+      description: Chạy `wl-ngosen --version`.
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distro
+    validations:
+      required: true
+
+  - type: textarea
+    id: typing_log
+    attributes:
+      label: Nhật ký gõ
+      description: |
+        Ngay sau khi lỗi xảy ra, chọn "Lưu nhật ký gõ" trong menu khay. File `~/.local/state/ngosen/typing-<ngày>-<giờ>.log`
+        chứa nội dung vừa gõ (không ghi nội dung trong ô mật khẩu). Đọc file trước khi chia sẻ, rồi kéo file vào ô này.
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log của bộ gõ
+      description: |
+        Chạy lại bộ gõ trong terminal để xem log, gõ tới khi lỗi xảy ra rồi dán kết quả:
+        ```sh
+        pkill -x wl-ngosen; NGOSEN_DEBUG=1 wl-ngosen 2>&1 | tail -200
+        ```
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Thông tin thêm
+      description: Ảnh chụp màn hình, video, hoặc app khác gõ đúng.

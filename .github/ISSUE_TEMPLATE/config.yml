@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Hỏi đáp
+    url: https://github.com/ngosen/wl-ngosen/discussions/categories/h%E1%BB%8Fi-%C4%91%C3%A1p
+    about: Hỏi cách dùng hay cách cài Ngó Sen cho Wayland, không phải báo lỗi.
+  - name: Ngó Sen cho GNOME
+    url: https://github.com/ngosen/ibus-ngosen/issues/new/choose
+    about: Lỗi của bản IBus (ibus-ngosen) báo ở kho riêng của bản đó.
+  - name: Ngó Sen đầy đủ cho fcitx5
+    url: https://github.com/ngosen/ngosen/issues/new/choose
+    about: Lỗi của bản fcitx5 (fcitx5-ngosen) báo ở kho riêng của bản đó.
