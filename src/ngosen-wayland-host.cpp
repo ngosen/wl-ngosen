@@ -231,6 +231,7 @@ namespace ngosen {
         Field               f;
         // As for fcitx5's own input-method-v2 frontend, so the core treats both alike.
         f.frontend        = "wayland_v2";
+        f.program         = im_.activeApp();
         f.surroundingText = w.hasText;
         f.preedit         = true;
         f.url             = w.purpose == PurposeUrl;

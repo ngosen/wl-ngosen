@@ -23,3 +23,5 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 - Gõ Sen (gõ thẳng vào ô, không gạch chân) là chế độ mặc định như bản IBus; chọn Preedit ở bản IBus (cài đặt dùng chung)
   thì wl-ngosen cũng gõ Preedit.
   Bấm chuột vào giữa một chữ rồi gõ tiếp vẫn có thể sửa nhầm chữ cũ, giống bản fcitx5 trên Sway và Hyprland (#7).
+- Nhớ chế độ gõ và lựa chọn Anh/Việt theo từng app như bản IBus và fcitx5, dùng chung tệp cài đặt; app được nhận ra
+  qua cửa sổ đang chọn của compositor.

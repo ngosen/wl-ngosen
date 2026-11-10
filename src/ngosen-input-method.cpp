@@ -8,6 +8,7 @@
 #include "input-method-unstable-v2-client-protocol.h"
 #include "ngosen-log.h"
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
+#include "ngosen-toplevels.h"
 #include "wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
 
 #include <algorithm>
@@ -159,6 +160,7 @@ namespace ngosen {
         } else if (std::strcmp(interface, zwlr_foreign_toplevel_manager_v1_interface.name) == 0 && im->toplevelManager_ == nullptr) {
             const uint32_t bound = version < ToplevelVersion ? version : ToplevelVersion;
             im->toplevelManager_ = static_cast<zwlr_foreign_toplevel_manager_v1*>(wl_registry_bind(registry, name, &zwlr_foreign_toplevel_manager_v1_interface, bound));
+            im->toplevels_       = std::make_unique<Toplevels>(im->toplevelManager_);
         }
     }
 
@@ -168,6 +170,10 @@ namespace ngosen {
             im->globalLost_ = true;
             im->events_.push_back(ImEvent{ImEvent::Kind::Unavailable});
         }
+    }
+
+    std::string InputMethod::activeApp() const {
+        return toplevels_ ? toplevels_->activeApp() : std::string();
     }
 
     InputMethod::Connection InputMethod::connect() {
@@ -450,6 +456,7 @@ namespace ngosen {
             zwp_virtual_keyboard_v1_destroy(vk_);
         if (im_ != nullptr)
             zwp_input_method_v2_destroy(im_);
+        toplevels_.reset();
         if (toplevelManager_ != nullptr)
             wl_proxy_destroy(reinterpret_cast<wl_proxy*>(toplevelManager_));
         if (vkManager_ != nullptr)

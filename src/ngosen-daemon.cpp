@@ -5,6 +5,7 @@
  */
 #include "ngosen-daemon.h"
 
+#include "ngosen-ibus-app-modes.h"
 #include "ngosen-ibus-config.h"
 #include "ngosen-ibus-resources.h"
 #include "ngosen-keysym.h"
@@ -38,9 +39,13 @@ namespace ngosen {
             ToggleKey                    toggle;
             unsigned                     chordsGeneration = ~0U;
             // What the toggle key last chose; shared with the IBus edition through its marker file.
-            bool       englishOn = readEnglishOn(resources.paths());
-            GMainLoop* loop      = nullptr;
-            int        status    = 0;
+            bool        englishOn = readEnglishOn(resources.paths());
+            AppModes    appModes{resources.paths().appModesFile()};
+            AppSwitches appSwitches{resources.paths().appSwitchesFile()};
+            // The app the mode was picked for.
+            std::string modeApp;
+            GMainLoop*  loop   = nullptr;
+            int         status = 0;
             // The held key. The grab sends a key once; as in fcitx5, the input method repeats it.
             struct {
                 uint32_t code   = 0;
@@ -60,10 +65,28 @@ namespace ngosen {
                 readToggleKeys();
             }
 
-            // As the IBus edition: Sen when the shared setting types straight into fields, else Preedit.
-            // In Sen the core picks for each word whether it goes into the field or the preedit.
+            std::string currentApp() const {
+                return modeAppName(im.activeApp());
+            }
+
+            // As the IBus edition: the toggle key's last choice in the app decides the language, else
+            // the mode picked for it, else the last switch anywhere. A mode picked for the app wins over
+            // the shared one: Sen when the shared setting types straight into fields, else Preedit.
+            Mode typingMode(const std::string& app) {
+                const auto mode       = appModes.find(app);
+                const bool vietnamese = appSwitches.find(app).value_or(mode ? *mode != AppMode::Off : !englishOn);
+                if (!vietnamese)
+                    return Mode::Off;
+                if (mode == AppMode::Sen)
+                    return Mode::Sen;
+                if (mode == AppMode::Preedit)
+                    return Mode::Preedit;
+                return resources.settings().directTyping ? Mode::Sen : Mode::Preedit;
+            }
+
             void applyMode() {
-                realMode = englishOn ? Mode::Off : resources.settings().directTyping ? Mode::Sen : Mode::Preedit;
+                modeApp  = currentApp();
+                realMode = typingMode(modeApp);
             }
 
             // The word ends in the mode it was typed in, and the core drops what it held for it.
@@ -112,7 +135,12 @@ namespace ngosen {
             }
 
             void toggleLanguage() {
-                englishOn = !englishOn;
+                // Read again: the app or its saved language may have changed since the last key.
+                const std::string app        = currentApp();
+                const bool        vietnamese = typingMode(app) == Mode::Off;
+                if (!app.empty() && !appSwitches.set(app, vietnamese))
+                    NGOSEN_WARN("Cannot save the language for " + app);
+                englishOn = !vietnamese;
                 if (!saveEnglishOn(resources.paths(), englishOn))
                     NGOSEN_WARN("Cannot save the language");
                 NGOSEN_INFO(std::string("Toggle key: ") + (englishOn ? "English" : "Vietnamese"));
@@ -135,6 +163,15 @@ namespace ngosen {
                 // The per-field checks of Sen start over, as the fcitx5 frontend does on focus-in.
                 if (realMode == Mode::Sen)
                     state->activate(Mode::Sen, true);
+            }
+
+            // activated can come after the field's activate, so the first key may be the first to see
+            // the new app. Between words only, as a mode change would end the word.
+            void followApp() {
+                if (currentApp() == modeApp || host->hasPreedit() || state->holdsWord())
+                    return;
+                NGOSEN_INFO("App: " + currentApp());
+                switchMode();
             }
 
             // A change the app made itself, as on a click, is left to the core as fcitx5's
@@ -216,6 +253,7 @@ namespace ngosen {
                 if (!im.field().active)
                     return;
                 applyNewSettings();
+                followApp();
                 xkb_state*     xkb  = im.xkbState();
                 const uint32_t sym  = xkb != nullptr ? xkb_state_key_get_one_sym(xkb, event.code + 8) : XKB_KEY_NoSymbol;
                 const uint32_t mods = xStateOf(xkb) | (event.pressed ? 0 : ReleaseMask);

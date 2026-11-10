@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <string>
 
@@ -526,6 +527,83 @@ namespace {
         }
     }
 
+    void writeConfig(const std::string& name, const std::string& file, const std::string& text) {
+        const fs::path dir = fs::path(freshHome(name)) / ".config/ngosen";
+        fs::create_directories(dir);
+        std::ofstream(dir / file) << text;
+    }
+
+    std::string readConfig(const std::string& name, const std::string& file) {
+        std::ifstream      in(root / name / ".config/ngosen" / file);
+        std::ostringstream text;
+        text << in.rdbuf();
+        return text.str();
+    }
+
+    // A new field in the window that is now focused.
+    bool nextField(TestCompositor& compositor, const std::string& appId) {
+        const std::size_t grabs = compositor.count("grab.take");
+        compositor.deactivate();
+        compositor.done();
+        compositor.activateToplevel(appId);
+        compositor.openField("");
+        return compositor.waitFor([&] { return compositor.count("grab.take") > grabs && compositor.grabbed(); });
+    }
+
+    void testAppModes() {
+        {
+            TestCompositor compositor({});
+            writeConfig("app-mode", "ngosen-app-rules.conf", "firefox=5\n");
+            check(begin(compositor, "app-mode", "", Language::Vietnamese), "setup for a mode picked for an app", &compositor);
+            compositor.openToplevel("kate", false);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a mode picked for an app", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào "), "the app picked for Preedit gets the word", &compositor);
+            check(compositor.count("im.preedit c") > 0, "the mode picked for the app wins over the shared Sen", &compositor);
+            const std::size_t before = compositor.count("im.preedit c");
+            check(nextField(compositor, "kate"), "a new field in kate", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào ") && compositor.count("im.preedit c") == before, "an app with no mode follows the shared Sen", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "app-switch", "", Language::Vietnamese), "setup for the toggle key per app", &compositor);
+            compositor.openToplevel("gedit", false);
+            compositor.openToplevel("kate", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for the toggle key per app", &compositor);
+            tapCtrlShift(compositor);
+            check(compositor.barrier(), "barrier after the toggle in kate", &compositor);
+            check(readConfig("app-switch", "ngosen-app-switch.conf").find("App=kate") != std::string::npos, "the toggle is saved for the app, in the fcitx5 file", &compositor);
+            check(nextField(compositor, "gedit"), "a new field in gedit", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "aa "), "an app the toggle never switched follows the last switch", &compositor);
+            tapCtrlShift(compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "aa â "), "the toggle switches this app back to Vietnamese", &compositor);
+            check(nextField(compositor, "kate"), "kate again", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "aa "), "the app switched to English stays in English", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            writeConfig("app-late", "ngosen-app-rules.conf", "firefox=5\n");
+            check(begin(compositor, "app-late", "", Language::Vietnamese), "setup for a window activated after its field", &compositor);
+            compositor.openToplevel("kate", true);
+            compositor.openToplevel("firefox", false);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a window activated after its field", &compositor);
+            compositor.activateToplevel("firefox");
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào ") && compositor.count("im.preedit c") > 0, "the first key sees the app activated after the field", &compositor);
+            compositor.stop();
+        }
+    }
+
     void testRepeat() {
         {
             TestCompositor compositor({});
@@ -650,6 +728,7 @@ int main(int argc, char** argv) {
     testToggleKey();
     testPreedit();
     testSen();
+    testAppModes();
     testRepeat();
     // A failed run keeps each daemon's home, with its log.
     if (failures == 0) {
