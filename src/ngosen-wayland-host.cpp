@@ -57,12 +57,10 @@ namespace ngosen {
                 auto* timer = reinterpret_cast<Source*>(base)->timer;
                 // Fires once unless the callback rearms it and returns true.
                 g_source_set_ready_time(base, -1);
-                // The callback may destroy the timer, so what runs after it is copied first.
-                const auto after = timer->after_;
                 if (!timer->onTime_(*timer))
                     g_source_set_ready_time(base, -1);
-                if (after)
-                    after();
+                if (timer->after_)
+                    timer->after_();
                 return G_SOURCE_CONTINUE;
             }
 

@@ -373,6 +373,18 @@ namespace {
         }
         {
             TestCompositor compositor({});
+            check(begin(compositor, "preedit-serial", "", Language::Vietnamese) && focus(compositor), "setup for a done behind a key", &compositor);
+            compositor.clearLog();
+            // The done is read with the key, so the commit for the key must already name it.
+            type(compositor, {KeyA}, false);
+            compositor.surrounding("x", 1, 1);
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit a 1 1"); }), "the key shows", &compositor);
+            check(serialsCurrent(compositor), "a commit names a done read in the same batch", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
             check(begin(compositor, "preedit-password", "", Language::Vietnamese) && focus(compositor), "setup for a password", &compositor);
             compositor.contentType(0, PurposePassword);
             compositor.done();
