@@ -445,9 +445,24 @@ namespace ngosen {
             zwp_virtual_keyboard_v1_destroy(vk_);
         if (im_ != nullptr)
             zwp_input_method_v2_destroy(im_);
-        grab_ = nullptr;
-        vk_   = nullptr;
-        im_   = nullptr;
+        if (toplevelManager_ != nullptr)
+            wl_proxy_destroy(reinterpret_cast<wl_proxy*>(toplevelManager_));
+        if (vkManager_ != nullptr)
+            wl_proxy_destroy(reinterpret_cast<wl_proxy*>(vkManager_));
+        if (manager_ != nullptr)
+            zwp_input_method_manager_v2_destroy(manager_);
+        if (seat_ != nullptr)
+            wl_seat_destroy(seat_);
+        if (registry_ != nullptr)
+            wl_registry_destroy(registry_);
+        grab_            = nullptr;
+        vk_              = nullptr;
+        im_              = nullptr;
+        toplevelManager_ = nullptr;
+        vkManager_       = nullptr;
+        manager_         = nullptr;
+        seat_            = nullptr;
+        registry_        = nullptr;
         // A compositor drops what it has not read once the socket closes, and a release lost there
         // leaves the key held in the app.
         if (!globalLost_)
