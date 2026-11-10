@@ -85,7 +85,10 @@ namespace ngosen {
             }
 
             void applyMode() {
-                modeApp  = currentApp();
+                if (const std::string app = currentApp(); app != modeApp) {
+                    modeApp = app;
+                    NGOSEN_INFO("App: " + (app.empty() ? std::string("(none)") : app));
+                }
                 realMode = typingMode(modeApp);
             }
 
@@ -170,7 +173,6 @@ namespace ngosen {
             void followApp() {
                 if (currentApp() == modeApp || host->hasPreedit() || state->holdsWord())
                     return;
-                NGOSEN_INFO("App: " + currentApp());
                 switchMode();
             }
 
