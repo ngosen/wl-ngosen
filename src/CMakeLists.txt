@@ -23,6 +23,7 @@ target_link_libraries(ngosen_shared PUBLIC ngosen_core PkgConfig::GIO PkgConfig:
 add_library(ngosen_wayland STATIC
     ngosen-daemon.cpp
     ngosen-input-method.cpp
+    ngosen-toplevels.cpp
     ngosen-toggle-key.cpp
     ngosen-wayland-host.cpp
     ngosen-wayland-key.cpp

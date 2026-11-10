@@ -28,6 +28,8 @@ struct xkb_state;
 
 namespace ngosen {
 
+    class Toplevels;
+
     // What the app told the compositor about the focused field, applied on each done.
     struct WaylandField {
         bool        active  = false;
@@ -115,6 +117,10 @@ namespace ngosen {
         zwlr_foreign_toplevel_manager_v1* toplevelManager() const {
             return toplevelManager_;
         }
+        // The focused window's app_id, and its app named as the IBus edition names it; empty without
+        // wlr-foreign-toplevel-management.
+        std::string activeAppId() const;
+        std::string activeProgram() const;
 
         // False when nothing may go to the field: it is not focused, or a focus change is waiting.
         bool maySend();
@@ -156,11 +162,12 @@ namespace ngosen {
         zwp_virtual_keyboard_manager_v1*   vkManager_       = nullptr;
         uint32_t                           vkManagerName_   = 0;
         zwlr_foreign_toplevel_manager_v1*  toplevelManager_ = nullptr;
-        zwp_input_method_v2*               im_              = nullptr;
-        zwp_input_method_keyboard_grab_v2* grab_            = nullptr;
-        zwp_virtual_keyboard_v1*           vk_              = nullptr;
-        bool                               vkHasKeymap_     = false;
-        bool                               globalLost_      = false;
+        std::unique_ptr<Toplevels>         toplevels_;
+        zwp_input_method_v2*               im_          = nullptr;
+        zwp_input_method_keyboard_grab_v2* grab_        = nullptr;
+        zwp_virtual_keyboard_v1*           vk_          = nullptr;
+        bool                               vkHasKeymap_ = false;
+        bool                               globalLost_  = false;
 
         // What arrived since the last done, applied on the next one.
         WaylandField pending_;

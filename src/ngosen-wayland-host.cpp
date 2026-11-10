@@ -230,7 +230,10 @@ namespace ngosen {
         const WaylandField& w = im_.field();
         Field               f;
         // As for fcitx5's own input-method-v2 frontend, so the core treats both alike.
-        f.frontend        = "wayland_v2";
+        f.frontend = "wayland_v2";
+        f.program  = im_.activeProgram();
+        if (const std::string appId = im_.activeAppId(); appId != f.program)
+            f.reportedProgram = appId;
         f.surroundingText = w.hasText;
         f.preedit         = true;
         f.url             = w.purpose == PurposeUrl;
