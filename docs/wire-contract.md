@@ -75,6 +75,11 @@ commit reaches the field before the key that follows it. The order within it is 
 `delete_surrounding_text`, `commit_string`, `set_preedit_string`. The preedit is sent with every
 commit while there is one, since a commit without it clears it.
 
+Every `done` applied while active is answered with a `commit(serial)`, empty if nothing gathered, as
+fcitx5 does. The compositor sends the app a text-input `done` for it, and Chromium sends its next
+`surrounding_text` only after that `done`; without the answer it stops reporting, and Sen falls back
+to BackSpace keys and the copy wait.
+
 Before each commit the daemon reads pending events without blocking, so the serial is the latest; if a
 `deactivate` arrived, nothing is committed, and what was gathered is dropped.
 

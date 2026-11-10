@@ -59,6 +59,11 @@ namespace ngosen {
         void flush();
         // Drops what gathered: the field went away, and nothing may reach the next one.
         void dropPending();
+        // Makes the next flush commit even with nothing new. Chromium reports surrounding text only
+        // after the text-input done that our commit causes, as fcitx5 relies on.
+        void answerDone() {
+            dirty_ = true;
+        }
         bool hasPreedit() const {
             return !preedit_.empty();
         }

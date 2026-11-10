@@ -296,6 +296,8 @@ namespace ngosen {
                         focusIn();
                     else if (!event.focusChanged && im.field().active && event.field.hasText)
                         fieldChanged();
+                    if (im.field().active)
+                        host->answerDone();
                     host->flush();
                 }
                 switch (event.kind) {

@@ -83,6 +83,11 @@ namespace test {
         void setReplyDelay(int ms) {
             replyDelayMs_ = ms;
         }
+        // One report at a time: the next waits for the input method to commit, as Chromium waits for
+        // the text-input done that answers its last commit.
+        void setReportsOnCommit(bool on) {
+            reportsOnCommit_ = on;
+        }
         // The app moves the cursor itself, as on a click, and says so with cause other.
         void               moveCursor(uint32_t cursor);
         const std::string& fieldText() const {
@@ -165,10 +170,14 @@ namespace test {
             std::string nextPreedit;
         };
         Field        field_;
-        int          replyDelayMs_ = 0;
-        xkb_state*   vkState_      = nullptr;
-        xkb_keymap*  vkKeymap_     = nullptr;
-        xkb_context* xkb_          = nullptr;
+        int          replyDelayMs_    = 0;
+        bool         reportsOnCommit_ = false;
+        bool         owedReport_      = false;
+        bool         awaitingAnswer_  = false; // a report went out and no commit answered it yet
+        uint32_t     owedCause_       = 0;
+        xkb_state*   vkState_         = nullptr;
+        xkb_keymap*  vkKeymap_        = nullptr;
+        xkb_context* xkb_             = nullptr;
         struct LateReport {
             std::string                           text;
             uint32_t                              cursor;
@@ -184,6 +193,7 @@ namespace test {
         void                   fieldKey(uint32_t code, bool pressed);
         void                   fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
         void                   reportField(uint32_t cause);
+        void                   deliverReport(uint32_t cause);
         void                   sendReport(const std::string& text, uint32_t cursor, uint32_t cause);
     };
 

@@ -99,7 +99,12 @@ namespace test {
             // A compositor may drop a commit that names an old done; the field model applies it but says so.
             if (serial != of(resource)->dones_)
                 of(resource)->note("stale commit " + std::to_string(serial) + " of " + std::to_string(of(resource)->dones_));
-            of(resource)->fieldCommit();
+            TestCompositor* compositor  = of(resource);
+            compositor->awaitingAnswer_ = false;
+            compositor->fieldCommit();
+            if (compositor->owedReport_ && compositor->field_.open) {
+                compositor->deliverReport(compositor->owedCause_);
+            }
         }
         void imPopup(wl_client*, wl_resource*, uint32_t, wl_resource*) {}
         void imGrab(wl_client* client, wl_resource* resource, uint32_t id) {
@@ -505,11 +510,13 @@ namespace test {
             vkKeymap_       = xkb_keymap_new_from_string(xkb_, keys.c_str(), XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
             vkState_        = xkb_state_new(vkKeymap_);
         }
-        field_         = Field{};
-        field_.open    = true;
-        field_.reports = reports;
-        field_.text    = text;
-        field_.cursor  = static_cast<uint32_t>(text.size());
+        field_          = Field{};
+        owedReport_     = false;
+        awaitingAnswer_ = reportsOnCommit_ && reports;
+        field_.open     = true;
+        field_.reports  = reports;
+        field_.text     = text;
+        field_.cursor   = static_cast<uint32_t>(text.size());
         activate();
         if (reports)
             surrounding(field_.text, field_.cursor, field_.cursor);
@@ -581,6 +588,16 @@ namespace test {
     void TestCompositor::reportField(uint32_t cause) {
         if (!field_.reports)
             return;
+        if (reportsOnCommit_ && awaitingAnswer_) {
+            owedReport_ = true;
+            owedCause_  = cause;
+            return;
+        }
+        deliverReport(cause);
+    }
+
+    void TestCompositor::deliverReport(uint32_t cause) {
+        owedReport_ = false;
         if (replyDelayMs_ <= 0) {
             sendReport(field_.text, field_.cursor, cause);
             return;
@@ -618,6 +635,7 @@ namespace test {
         if (im_ == nullptr)
             return;
         note("field " + text + "|" + std::to_string(cursor));
+        awaitingAnswer_ = reportsOnCommit_;
         surrounding(text, cursor, cursor);
         this->cause(cause);
         done(false);
