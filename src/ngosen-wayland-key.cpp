@@ -77,8 +77,20 @@ namespace ngosen {
         return time_;
     }
 
+    // As fcitx5's normalized key: Shift that only picks the character (V, !) is no shortcut, so the
+    // core keeps the word going.
     bool WaylandKeyPress::hasModifier() const {
-        return (state_ & SimpleModifiers) != 0;
+        uint32_t       mods   = state_ & SimpleModifiers;
+        const bool     letter = (appSym_ >= XKB_KEY_a && appSym_ <= XKB_KEY_z) || (appSym_ >= XKB_KEY_A && appSym_ <= XKB_KEY_Z);
+        const bool     keypad = appSym_ >= XKB_KEY_KP_0 && appSym_ <= XKB_KEY_KP_9;
+        const uint32_t text   = xkb_keysym_to_utf32(appSym_);
+        if (letter) {
+            if (mods == ShiftMask)
+                mods = 0;
+        } else if ((text != 0 && appSym_ != XKB_KEY_space && appSym_ != XKB_KEY_Return && appSym_ != XKB_KEY_Tab) || keypad) {
+            mods &= ~ShiftMask;
+        }
+        return mods != 0;
     }
 
     bool WaylandKeyPress::isCursorMove() const {

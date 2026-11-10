@@ -474,6 +474,21 @@ namespace {
         }
         {
             TestCompositor compositor({});
+            check(begin(compositor, "sen-capital", "", Language::Vietnamese), "setup for a capital in Sen", &compositor);
+            compositor.openField("", false);
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a capital in Sen", &compositor);
+            type(compositor, {KeyT, KeyI, KeyE, KeyE, KeyS, KeyN, KeyG, KeySpace});
+            compositor.key(KeyLeftShift, true);
+            compositor.modifiers(1, 0, 0, 0);
+            compositor.tap(KeyV);
+            compositor.modifiers(0, 0, 0, 0);
+            compositor.key(KeyLeftShift, false);
+            type(compositor, {KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace});
+            check(fieldShows(compositor, "tiếng Việt "), "a capital keeps the word", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
             check(begin(compositor, "sen-no-text", "", Language::Vietnamese), "setup for Sen without surrounding text", &compositor);
             compositor.openField("", false);
             check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a field without surrounding text", &compositor);
