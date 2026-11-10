@@ -606,6 +606,32 @@ namespace {
         }
         {
             TestCompositor compositor({});
+            writeConfig("app-close", "ngosen-app-rules.conf", "firefox=5\nkate=0\n");
+            check(begin(compositor, "app-close", "", Language::Vietnamese), "setup for a window that changes and closes", &compositor);
+            compositor.openToplevel("kate", false);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a window that changes and closes", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA});
+            // The window changes while the word is in the preedit, not before its keys are read.
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit cha 3 3"); }), "the word is in the preedit", &compositor);
+            compositor.activateToplevel("kate");
+            type(compositor, {KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào "), "a new app in the middle of a word leaves the word whole", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "chào aa "), "after the word the app's Off mode types English", &compositor);
+            compositor.closeToplevel("kate");
+            compositor.deactivate();
+            compositor.done();
+            const std::size_t grabs = compositor.count("grab.take");
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.count("grab.take") > grabs && compositor.grabbed(); }), "a field with no window", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "â "), "once the window closed, the shared mode applies", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
             writeConfig("app-late", "ngosen-app-rules.conf", "firefox=5\n");
             check(begin(compositor, "app-late", "", Language::Vietnamese), "setup for a window activated after its field", &compositor);
             compositor.openToplevel("kate", true);

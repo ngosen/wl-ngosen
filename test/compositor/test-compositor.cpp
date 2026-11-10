@@ -453,6 +453,18 @@ namespace test {
         run(0);
     }
 
+    void TestCompositor::closeToplevel(const std::string& appId) {
+        for (auto it = toplevels_.begin(); it != toplevels_.end(); ++it) {
+            if (it->appId != appId)
+                continue;
+            for (wl_resource* handle : it->handles)
+                zwlr_foreign_toplevel_handle_v1_send_closed(handle);
+            toplevels_.erase(it);
+            break;
+        }
+        run(0);
+    }
+
     bool TestCompositor::barrier() {
         const std::string up     = "vk.key " + std::to_string(barrierCode_) + " 0";
         const std::size_t before = count(up);

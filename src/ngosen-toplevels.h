@@ -40,6 +40,7 @@ namespace ngosen {
 
         void                                 addWindow(zwlr_foreign_toplevel_handle_v1* handle);
         void                                 removeWindow(Window* window);
+        void                                 removeAll();
         const Window*                        activeWindow() const;
 
         zwlr_foreign_toplevel_manager_v1*    manager_;

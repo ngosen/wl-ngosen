@@ -48,7 +48,10 @@ namespace ngosen {
         static void                                               toplevel(void* data, zwlr_foreign_toplevel_manager_v1*, zwlr_foreign_toplevel_handle_v1* handle) {
             static_cast<Toplevels*>(data)->addWindow(handle);
         }
-        static void                                                finished(void*, zwlr_foreign_toplevel_manager_v1*) {}
+        // No window changes are sent after this, so a kept window would name the app forever.
+        static void finished(void* data, zwlr_foreign_toplevel_manager_v1*) {
+            static_cast<Toplevels*>(data)->removeAll();
+        }
 
         static constexpr zwlr_foreign_toplevel_manager_v1_listener manager = {toplevel, finished};
     };
@@ -58,8 +61,13 @@ namespace ngosen {
     }
 
     Toplevels::~Toplevels() {
+        removeAll();
+    }
+
+    void Toplevels::removeAll() {
         for (const auto& window : windows_)
             zwlr_foreign_toplevel_handle_v1_destroy(window->handle);
+        windows_.clear();
     }
 
     const Toplevels::Window* Toplevels::activeWindow() const {

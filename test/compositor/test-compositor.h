@@ -108,6 +108,7 @@ namespace test {
         // Foreign toplevels.
         void openToplevel(const std::string& appId, bool activated);
         void activateToplevel(const std::string& appId);
+        void closeToplevel(const std::string& appId);
 
         // A key nothing types, sent through and back: everything the daemon got before it is handled.
         bool                            barrier();
