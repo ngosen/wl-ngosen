@@ -49,3 +49,60 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: misc/check-core-tag.sh
+
+  build:
+    name: Build and test (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # A new enough Rust for the core comes only as versioned packages on Ubuntu 24.04.
+          - image: ubuntu:24.04
+            packages: g++ cmake make git ca-certificates pkg-config libglib2.0-dev libxkbcommon-dev libwayland-dev wayland-protocols cargo-1.91 rustc-1.91
+            path: /usr/lib/rust-1.91/bin
+          - image: fedora:44
+            packages: gcc-c++ cmake make git pkgconf-pkg-config glib2-devel libxkbcommon-devel wayland-devel wayland-protocols-devel cargo rust
+    steps:
+      - name: Install dependencies
+        run: |
+          if command -v dnf > /dev/null; then
+            dnf install -y ${{ matrix.packages }}
+          else
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ${{ matrix.packages }}
+          fi
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          export PATH="${{ matrix.path }}:$PATH"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j"$(nproc)"
+
+  # A memory error in the daemon stops typing in every app until it is started again.
+  sanitizers:
+    name: Tests with ASan and UBSan
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install dependencies
+        run: >-
+          dnf install -y gcc-c++ cmake ninja-build git pkgconf-pkg-config glib2-devel libxkbcommon-devel
+          wayland-devel wayland-protocols-devel cargo rust libasan libubsan
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          san="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_FLAGS="$san" -DCMAKE_CXX_FLAGS="$san" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build build -j"$(nproc)"
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j"$(nproc)"

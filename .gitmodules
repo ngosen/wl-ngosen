@@ -1,0 +1,3 @@
+[submodule "ngosen"]
+	path = ngosen
+	url = https://github.com/ngosen/ngosen.git
