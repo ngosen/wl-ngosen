@@ -15,6 +15,7 @@ input-method-v2 frontend (`waylandimserverv2.cpp`) does the same, this edition r
 | Start | Create im and vk for the seat. The grab is taken on the first `activate`. |
 | Grab `keymap` | Keep the fd and size; give the same keymap to vk. Size 0 is logged and ignored. |
 | Key before any keymap | Logged and dropped. |
+| A keymap that cannot be read, compiled or handed to vk | Log and exit 1. |
 | im `unavailable` | Release pressed vk keys, send the grab's modifiers on vk, destroy grab, im and vk, notify once, exit 1. |
 | A global removed mid-session | As `unavailable`. |
 | SIGINT/SIGTERM | As `unavailable`, exit 0. |
@@ -31,7 +32,7 @@ Events are double-buffered and applied on `done`; the daemon counts `done` event
 | `surrounding_text` | Pending text, cursor, anchor (bytes). |
 | `text_change_cause` | Pending cause. |
 | `content_type` | Pending hint and purpose. |
-| `done` | Apply. Became active: take the grab (releasing an old one first), focus the core. Became inactive: release pressed vk keys, restore modifiers, release the grab, unfocus the core. Still active with new text: give it to the core; cause `other` resets the word. |
+| `done` | Apply. Became active: take the grab (releasing an old one first), focus the core. Became inactive: release pressed vk keys, restore modifiers, release the grab, unfocus the core. Still active with new text: give it to the core. The cause is not acted on, as in fcitx5: GTK 4 keeps showing its preedit after a change it made, so a reset would wipe the word. |
 
 ## Field
 
@@ -57,9 +58,9 @@ Nothing is sent while inactive or after a pending `deactivate` was read; the cal
 
 | Host call | Wire |
 | --- | --- |
-| `commitText` | im `commit_string`, then `commit(serial)` |
-| `showPreedit` / `clearPreedit` + `refreshPreedit` | im `set_preedit_string` (cursor at the end; empty to clear), then `commit(serial)` |
-| `deleteSurrounding(offset, size)` | as fcitx5: only a range that holds the cursor (`offset <= 0 <= offset + size`) can be sent; characters → bytes against the last surrounding text, `delete_surrounding_text(before, after)`, then `commit(serial)`. Anything else, or no valid surrounding text, is dropped and logged. |
+| `commitText` | gathered for im `commit_string` |
+| `showPreedit` / `clearPreedit` + `refreshPreedit` | gathered for im `set_preedit_string`, cursor at the end in bytes |
+| `deleteSurrounding(offset, size)` | as fcitx5: only a range that holds the cursor (`offset <= 0 <= offset + size`) can be sent; characters → bytes against the last surrounding text, gathered for `delete_surrounding_text(before, after)`. Anything else, or no valid surrounding text, is dropped and logged. |
 | `forwardKey`, `forwardKeyPress` | vk `key` with the evdev code; modifiers as below |
 | `pressSystemKeys` | false |
 | `surrounding` | last applied text; invalid on bad UTF-8, a cursor or anchor out of range, or no `surrounding_text` since `activate` |
@@ -69,8 +70,16 @@ Nothing is sent while inactive or after a pending `deactivate` was read; the cal
 | candidates, panel, status | no-ops (no candidate list in this edition) |
 | `keyText` | xkbcommon `xkb_keysym_to_utf8` |
 
+What is gathered goes in one `commit(serial)` after each event or timer, and before any vk key, so a
+commit reaches the field before the key that follows it. The order within it is the protocol's:
+`delete_surrounding_text`, `commit_string`, `set_preedit_string`. The preedit is sent with every
+commit while there is one, since a commit without it clears it.
+
 Before each commit the daemon reads pending events without blocking, so the serial is the latest; if a
-`deactivate` arrived, nothing is committed.
+`deactivate` arrived, nothing is committed, and what was gathered is dropped.
+
+On focus out the core drops the word being typed: a commit after `deactivate` would be stale, and the
+word must not reach the next field. A password or PIN purpose skips the core; keys go to vk as typed.
 
 ## Keys
 

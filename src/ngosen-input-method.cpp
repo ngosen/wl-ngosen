@@ -388,7 +388,8 @@ namespace ngosen {
     }
 
     void InputMethod::sendKey(uint32_t time, uint32_t code, bool pressed, uint32_t extraMods) {
-        if (!vkHasKeymap_)
+        // A release whose press the app never got would reach it unmatched.
+        if (!vkHasKeymap_ || (!pressed && pressed_.count(code) == 0))
             return;
         const bool changesMods = extraMods != 0 && (depressed_ & extraMods) != extraMods;
         if (changesMods)

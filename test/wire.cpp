@@ -24,6 +24,8 @@ namespace {
 
     // evdev codes
     constexpr uint32_t KeyA = 30, KeyS = 31, KeyZ = 44, KeyLeftShift = 42, KeyLeftCtrl = 29, KeyLeftAlt = 56;
+    constexpr uint32_t KeyC = 46, KeyH = 35, KeyO = 24, KeyF = 33, KeySpace = 57;
+    constexpr uint32_t PurposePassword = 8, CauseOther = 1;
     // Modifier bits of the us keymap the test compositor sends.
     constexpr uint32_t ShiftBit = 1U << 0, CtrlBit = 1U << 2, AltBit = 1U << 3;
 
@@ -43,13 +45,23 @@ namespace {
     }
 
     // Starts the daemon and waits until it has the input method object.
-    bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "") {
+    enum class Language {
+        English,
+        Vietnamese
+    };
+
+    // English unless asked: most checks are about keys reaching the app, which typing Vietnamese changes.
+    bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "", Language language = Language::English) {
         const std::string home = freshHome(name);
+        if (language == Language::English) {
+            fs::create_directories(fs::path(home) / ".local/state/ngosen");
+            std::ofstream(fs::path(home) / ".local/state/ngosen/english");
+        }
         if (!settings.empty()) {
             fs::create_directories(fs::path(home) / ".config/ngosen");
             std::ofstream(fs::path(home) / ".config/ngosen/ngosen.conf") << settings;
         }
-        compositor.start(program, home);
+        compositor.start(program, home, {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY});
         return compositor.waitFor([&] { return compositor.hasClient() && compositor.logged("vk.create"); });
     }
 
@@ -263,7 +275,7 @@ namespace {
     void testToggleKey() {
         {
             TestCompositor compositor({});
-            check(begin(compositor, "toggle") && focus(compositor), "setup for the toggle key", &compositor);
+            check(begin(compositor, "toggle", "", Language::Vietnamese) && focus(compositor), "setup for the toggle key", &compositor);
             check(!englishMark("toggle"), "a new user starts in Vietnamese");
             tapCtrlShift(compositor);
             check(compositor.barrier(), "barrier after Ctrl+Shift", &compositor);
@@ -277,7 +289,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "toggle-letter", "ToggleKey=Alt+z\n") && focus(compositor), "setup for Alt+Z", &compositor);
+            check(begin(compositor, "toggle-letter", "ToggleKey=Alt+z\n", Language::Vietnamese) && focus(compositor), "setup for Alt+Z", &compositor);
             compositor.key(KeyLeftAlt, true);
             compositor.modifiers(AltBit, 0, 0, 0);
             compositor.tap(KeyZ);
@@ -289,6 +301,107 @@ namespace {
             check(balanced(compositor), "every key the app saw is let go", &compositor);
             compositor.tap(KeyZ);
             check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyZ) + " ") == 2, "a plain z still types", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void type(TestCompositor& compositor, std::initializer_list<uint32_t> keys, bool send = true) {
+        for (uint32_t key : keys)
+            compositor.tap(key, send);
+    }
+
+    // Each commit must name the latest done, or the compositor drops it as stale.
+    bool serialsCurrent(const TestCompositor& compositor) {
+        const auto commits = compositor.lines("im.commit ");
+        for (const auto& line : commits) {
+            if (line != "im.commit " + std::to_string(compositor.dones()))
+                return false;
+        }
+        return !commits.empty();
+    }
+
+    void testPreedit() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit", "", Language::Vietnamese) && focus(compositor), "setup for preedit", &compositor);
+            compositor.clearLog();
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(compositor.barrier(), "barrier after a word", &compositor);
+            const auto preedits = compositor.lines("im.preedit ");
+            // The protocol counts the cursor in bytes: "chào" is five.
+            check(!preedits.empty() && preedits.back() == "im.preedit chào 5 5", "the word shows as underlined text while typing", &compositor);
+            check(compositor.count("im.commit_string chào ") == 1, "space commits the word with the space", &compositor);
+            check(compositor.lines("vk.key ").size() == 2 /* the barrier */, "the app gets no key for letters that went into the word", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeySpace) + " ") == 0, "the app gets no space key on top", &compositor);
+            const std::size_t at = indexOf(compositor, "im.commit_string");
+            check(at + 1 < compositor.log().size() && compositor.log()[at + 1].rfind("im.commit ", 0) == 0, "the commit carries no preedit, which clears it", &compositor);
+            check(serialsCurrent(compositor), "every commit names the latest done", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-focus", "", Language::Vietnamese) && focus(compositor), "setup for focus loss", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO});
+            // Not barrier(): its key would end the word.
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit chao 4 4"); }), "a half word shows", &compositor);
+            compositor.clearLog();
+            compositor.deactivate();
+            compositor.done();
+            compositor.run(200);
+            check(compositor.count("im.commit") == 0, "nothing goes to a field that lost focus", &compositor);
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "a new field gets the grab", &compositor);
+            type(compositor, {KeyA});
+            check(compositor.barrier(), "barrier in the new field", &compositor);
+            const auto preedits = compositor.lines("im.preedit ");
+            check(preedits.size() == 1 && preedits[0] == "im.preedit a 1 1", "the new field starts with an empty word", &compositor);
+            check(compositor.count("im.commit_string chao") == 0, "nothing of the old word reaches the new field", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-stale", "", Language::Vietnamese) && focus(compositor), "setup for a stale batch", &compositor);
+            compositor.clearLog();
+            // Keys and the focus change arrive in one read: the keys belong to the field that is gone.
+            type(compositor, {KeyC, KeyH, KeyA}, false);
+            compositor.deactivate();
+            compositor.done();
+            compositor.run(300);
+            check(compositor.count("im.") == 0, "keys read with a focus change send nothing to either field", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-password", "", Language::Vietnamese) && focus(compositor), "setup for a password", &compositor);
+            compositor.contentType(0, PurposePassword);
+            compositor.done();
+            compositor.clearLog();
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF});
+            check(compositor.barrier(), "barrier in a password field", &compositor);
+            check(compositor.count("im.") == 0, "a password field gets no preedit", &compositor);
+            const auto keys = compositor.lines("vk.key ");
+            check(keys.size() >= 10 && keys[0] == "vk.key 46 1" && keys[8] == "vk.key 33 1", "a password field gets the keys as typed", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-cause", "", Language::Vietnamese) && focus(compositor), "setup for an app change", &compositor);
+            compositor.surrounding("xyz", 3, 3);
+            compositor.done();
+            type(compositor, {KeyC, KeyH, KeyA});
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit cha 3 3"); }), "a half word shows", &compositor);
+            compositor.clearLog();
+            // A click moves the cursor in unchanged text, and the app says it made the change.
+            compositor.surrounding("xyz", 0, 0);
+            compositor.cause(CauseOther);
+            compositor.done();
+            type(compositor, {KeyF, KeySpace});
+            check(compositor.barrier(), "barrier after the click", &compositor);
+            // As with fcitx5's input-method-v2 frontend: the underlined word moves with the cursor and goes on there.
+            check(compositor.count("im.commit_string chà ") == 1 && !compositor.logged("im.commit_string cha"), "a click leaves the underlined word to the core, as fcitx5 does",
+                  &compositor);
+            check(serialsCurrent(compositor), "commits after the click name its done", &compositor);
             compositor.stop();
         }
     }
@@ -354,6 +467,7 @@ int main(int argc, char** argv) {
     testExits();
     testReviewCases();
     testToggleKey();
+    testPreedit();
     fs::remove_all(root);
     if (failures == 0)
         std::cout << "all wire checks passed\n";

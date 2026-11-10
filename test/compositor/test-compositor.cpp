@@ -314,6 +314,7 @@ namespace test {
     }
     void TestCompositor::done(bool send) {
         ++serial_;
+        ++dones_;
         zwp_input_method_v2_send_done(im_);
         if (send)
             run(0);
@@ -362,9 +363,9 @@ namespace test {
         if (send)
             run(0);
     }
-    void TestCompositor::tap(uint32_t code) {
-        key(code, true);
-        key(code, false);
+    void TestCompositor::tap(uint32_t code, bool send) {
+        key(code, true, send);
+        key(code, false, send);
     }
     void TestCompositor::modifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
         // Without a grab a compositor sends keys to the app, not to the input method.

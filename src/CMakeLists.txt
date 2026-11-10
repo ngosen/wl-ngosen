@@ -24,6 +24,7 @@ add_library(ngosen_wayland STATIC
     ngosen-daemon.cpp
     ngosen-input-method.cpp
     ngosen-toggle-key.cpp
+    ngosen-wayland-host.cpp
     ngosen-wayland-key.cpp
 )
 target_include_directories(ngosen_wayland PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
