@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "bamboo-core.h"
+#include "ngosen-daemon.h"
 #include "ngosen-ibus-config.h"
 #include "ngosen-ibus-keys.h"
 #include "ngosen-ibus-resources.h"
@@ -62,6 +63,5 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "wl-ngosen: unknown option %s\n", argv[1]);
         return 2;
     }
-    std::fprintf(stderr, "wl-ngosen: typing on Wayland is not built yet\n");
-    return 1;
+    return ngosen::runDaemon();
 }

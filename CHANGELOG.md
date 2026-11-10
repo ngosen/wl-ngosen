@@ -13,3 +13,5 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 - Bắt đầu kho `wl-ngosen`: bộ gõ Ngó Sen chạy thẳng trên Wayland cho niri, Sway, Hyprland, chưa gõ được (#1).
 - Đọc chung cài đặt, gõ tắt, chế độ theo app với bản IBus trong `~/.config/ngosen`; lần đầu chạy nhập cài đặt của bản
   fcitx5 như bản IBus (#2).
+- Chạy được trên compositor có input-method-v2: nhận phím rồi gửi lại nguyên vẹn, chưa gõ tiếng Việt; compositor không
+  hỗ trợ (GNOME, KDE) thì thoát êm (#3).

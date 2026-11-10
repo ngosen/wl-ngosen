@@ -60,10 +60,10 @@ jobs:
         include:
           # A new enough Rust for the core comes only as versioned packages on Ubuntu 24.04.
           - image: ubuntu:24.04
-            packages: g++ cmake make git ca-certificates pkg-config libglib2.0-dev libxkbcommon-dev libwayland-dev wayland-protocols cargo-1.91 rustc-1.91
+            packages: g++ cmake make git ca-certificates pkg-config libglib2.0-dev libxkbcommon-dev libwayland-dev wayland-protocols xkb-data cargo-1.91 rustc-1.91
             path: /usr/lib/rust-1.91/bin
           - image: fedora:44
-            packages: gcc-c++ cmake make git pkgconf-pkg-config glib2-devel libxkbcommon-devel wayland-devel wayland-protocols-devel cargo rust
+            packages: gcc-c++ cmake make git pkgconf-pkg-config glib2-devel libxkbcommon-devel wayland-devel wayland-protocols-devel xkeyboard-config cargo rust
     steps:
       - name: Install dependencies
         run: |
@@ -93,7 +93,7 @@ jobs:
       - name: Install dependencies
         run: >-
           dnf install -y gcc-c++ cmake ninja-build git pkgconf-pkg-config glib2-devel libxkbcommon-devel
-          wayland-devel wayland-protocols-devel cargo rust libasan libubsan
+          wayland-devel wayland-protocols-devel xkeyboard-config cargo rust libasan libubsan
       - uses: actions/checkout@v7
         with:
           submodules: true

@@ -16,5 +16,6 @@ enable_testing()
 add_subdirectory(ngosen)
 
 set(NGOSEN_WL_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/wl-ngosen")
+add_subdirectory(protocol)
 add_subdirectory(src)
 add_subdirectory(test)
