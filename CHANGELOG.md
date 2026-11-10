@@ -22,4 +22,4 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 - Giữ phím thì chữ lặp lại theo tốc độ lặp phím của compositor, cả khi đang gõ chữ tiếng Việt (#6).
 - Gõ Sen (gõ thẳng vào ô, không gạch chân) là chế độ mặc định như bản IBus; chọn Preedit ở bản IBus (cài đặt dùng chung)
   thì wl-ngosen cũng gõ Preedit.
-  Bấm chuột vào giữa một chữ rồi gõ tiếp vẫn có thể sửa nhầm chữ cũ, giống bản fcitx5 trên Sway và Hyprland (#PR).
+  Bấm chuột vào giữa một chữ rồi gõ tiếp vẫn có thể sửa nhầm chữ cũ, giống bản fcitx5 trên Sway và Hyprland (#7).
