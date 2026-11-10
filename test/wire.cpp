@@ -25,6 +25,7 @@ namespace {
     // evdev codes
     constexpr uint32_t KeyA = 30, KeyS = 31, KeyZ = 44, KeyLeftShift = 42, KeyLeftCtrl = 29, KeyLeftAlt = 56;
     constexpr uint32_t KeyC = 46, KeyH = 35, KeyO = 24, KeyF = 33, KeySpace = 57;
+    constexpr uint32_t KeyV = 47, KeyI = 23, KeyE = 18, KeyJ = 36, KeyT = 20, KeyN = 49, KeyG = 34;
     constexpr uint32_t PurposePassword = 8, CauseOther = 1;
     // Modifier bits of the us keymap the test compositor sends.
     constexpr uint32_t ShiftBit = 1U << 0, CtrlBit = 1U << 2, AltBit = 1U << 3;
@@ -38,6 +39,17 @@ namespace {
             compositor->dump();
     }
 
+    // A check the shared core still fails, as the fcitx5 edition does on the same compositor. It
+    // fails the run once it passes, so the mark goes when the core is fixed.
+    void knownCoreFailure(bool ok, const std::string& what) {
+        if (ok) {
+            ++failures;
+            std::cout << "FAIL now passes, drop the known-failure mark: " << what << '\n';
+            return;
+        }
+        std::cout << "KNOWN core failure: " << what << '\n';
+    }
+
     std::string freshHome(const std::string& name) {
         const fs::path home = root / name;
         fs::create_directories(home / ".config");
@@ -49,6 +61,9 @@ namespace {
         English,
         Vietnamese
     };
+
+    // Sen is the default; checks written for underlined words ask for Preedit.
+    const std::string PreeditOnly = "DirectTyping=False\n";
 
     // English unless asked: most checks are about keys reaching the app, which typing Vietnamese changes.
     bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "", Language language = Language::English) {
@@ -275,7 +290,7 @@ namespace {
     void testToggleKey() {
         {
             TestCompositor compositor({});
-            check(begin(compositor, "toggle", "", Language::Vietnamese) && focus(compositor), "setup for the toggle key", &compositor);
+            check(begin(compositor, "toggle", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for the toggle key", &compositor);
             check(!englishMark("toggle"), "a new user starts in Vietnamese");
             tapCtrlShift(compositor);
             check(compositor.barrier(), "barrier after Ctrl+Shift", &compositor);
@@ -289,7 +304,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "toggle-letter", "ToggleKey=Alt+z\n", Language::Vietnamese) && focus(compositor), "setup for Alt+Z", &compositor);
+            check(begin(compositor, "toggle-letter", PreeditOnly + "ToggleKey=Alt+z\n", Language::Vietnamese) && focus(compositor), "setup for Alt+Z", &compositor);
             compositor.key(KeyLeftAlt, true);
             compositor.modifiers(AltBit, 0, 0, 0);
             compositor.tap(KeyZ);
@@ -323,7 +338,7 @@ namespace {
     void testPreedit() {
         {
             TestCompositor compositor({});
-            check(begin(compositor, "preedit", "", Language::Vietnamese) && focus(compositor), "setup for preedit", &compositor);
+            check(begin(compositor, "preedit", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for preedit", &compositor);
             compositor.clearLog();
             type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
             check(compositor.barrier(), "barrier after a word", &compositor);
@@ -340,7 +355,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "preedit-focus", "", Language::Vietnamese) && focus(compositor), "setup for focus loss", &compositor);
+            check(begin(compositor, "preedit-focus", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for focus loss", &compositor);
             type(compositor, {KeyC, KeyH, KeyA, KeyO});
             // Not barrier(): its key would end the word.
             check(compositor.waitFor([&] { return compositor.logged("im.preedit chao 4 4"); }), "a half word shows", &compositor);
@@ -361,7 +376,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "preedit-stale", "", Language::Vietnamese) && focus(compositor), "setup for a stale batch", &compositor);
+            check(begin(compositor, "preedit-stale", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a stale batch", &compositor);
             compositor.clearLog();
             // Keys and the focus change arrive in one read: the keys belong to the field that is gone.
             type(compositor, {KeyC, KeyH, KeyA}, false);
@@ -373,7 +388,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "preedit-serial", "", Language::Vietnamese) && focus(compositor), "setup for a done behind a key", &compositor);
+            check(begin(compositor, "preedit-serial", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a done behind a key", &compositor);
             compositor.clearLog();
             // The done is read with the key, so the commit for the key must already name it.
             type(compositor, {KeyA}, false);
@@ -385,7 +400,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "preedit-password", "", Language::Vietnamese) && focus(compositor), "setup for a password", &compositor);
+            check(begin(compositor, "preedit-password", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a password", &compositor);
             compositor.contentType(0, PurposePassword);
             compositor.done();
             compositor.clearLog();
@@ -398,7 +413,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "preedit-cause", "", Language::Vietnamese) && focus(compositor), "setup for an app change", &compositor);
+            check(begin(compositor, "preedit-cause", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for an app change", &compositor);
             compositor.surrounding("xyz", 3, 3);
             compositor.done();
             type(compositor, {KeyC, KeyH, KeyA});
@@ -426,6 +441,74 @@ namespace {
                 return false;
         }
         return !lines.empty() && lines.size() % 2 == 0;
+    }
+
+    // Sen types straight into the field: the app's own text, as the field model applies what the
+    // daemon sends, is what counts.
+    bool fieldShows(TestCompositor& compositor, const std::string& text) {
+        return compositor.waitFor([&] { return compositor.fieldText() == text && compositor.fieldPreedit().empty(); }, 3000);
+    }
+
+    void testSen() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen", "", Language::Vietnamese), "setup for Sen", &compositor);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "a field that reports its text gets the grab", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            // The core deletes the first word of an empty field with BackSpace keys.
+            check(fieldShows(compositor, "chào "), "Sen types the word into the field", &compositor);
+            check(compositor.count("im.preedit ") == 0, "nothing is underlined in a field that reports its text", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-bytes", "", Language::Vietnamese), "setup for Sen with marks", &compositor);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for Sen with marks", &compositor);
+            type(compositor, {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace});
+            // ệ is three bytes and replaces ê, two: a count in characters would cut into "Xin".
+            check(fieldShows(compositor, "Xin việt "), "deletes count bytes, so text before the word stays", &compositor);
+            check(compositor.count("im.delete ") > 0, "a field that shows the word is edited through surrounding text", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-no-text", "", Language::Vietnamese), "setup for Sen without surrounding text", &compositor);
+            compositor.openField("", false);
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a field without surrounding text", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào "), "a field that does not report its text still gets the word", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-slow", "", Language::Vietnamese), "setup for a slow app", &compositor);
+            compositor.setReplyDelay(60);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a slow app", &compositor);
+            type(compositor, {KeyT, KeyI, KeyE, KeyE, KeyS, KeyN, KeyG, KeySpace});
+            check(fieldShows(compositor, "tiếng "), "an app that reports late still ends with the word", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-click", "", Language::Vietnamese), "setup for a click in Sen", &compositor);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a click in Sen", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA});
+            check(compositor.waitFor([&] { return compositor.fieldText() == "cha"; }), "the start of a word is in the field", &compositor);
+            // A click before the word: the next keys should start a word there and leave "cha" alone.
+            // The core takes them as the rest of "cha" and gives "ào cha", as fcitx5 on Sway does.
+            compositor.moveCursor(0);
+            compositor.runFor(50);
+            type(compositor, {KeyO, KeyF, KeySpace});
+            // The second BackSpace finds nothing to delete, so no report comes and the core waits it out.
+            compositor.waitFor([&] { return compositor.fieldText() == "ào cha" || compositor.fieldText() == "ò cha"; }, 3000);
+            knownCoreFailure(compositor.fieldText() == "ò cha", "after a click the tone goes on the new word, not the old one");
+            check(compositor.fieldText() == "ào cha", "after a click Sen does what the fcitx5 edition does", &compositor);
+            compositor.stop();
+        }
     }
 
     void testRepeat() {
@@ -476,7 +559,7 @@ namespace {
         }
         {
             TestCompositor compositor({});
-            check(begin(compositor, "repeat-word", "", Language::Vietnamese) && focus(compositor), "setup for a held letter", &compositor);
+            check(begin(compositor, "repeat-word", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a held letter", &compositor);
             compositor.repeatInfo(100, 50);
             compositor.clearLog();
             compositor.key(KeyA, true);
@@ -551,9 +634,14 @@ int main(int argc, char** argv) {
     testReviewCases();
     testToggleKey();
     testPreedit();
+    testSen();
     testRepeat();
-    fs::remove_all(root);
-    if (failures == 0)
+    // A failed run keeps each daemon's home, with its log.
+    if (failures == 0) {
+        fs::remove_all(root);
         std::cout << "all wire checks passed\n";
+    } else {
+        std::cout << "daemon logs kept in " << root.string() << '\n';
+    }
     return failures == 0 ? 0 : 1;
 }

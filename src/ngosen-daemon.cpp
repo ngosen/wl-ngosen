@@ -60,9 +60,10 @@ namespace ngosen {
                 readToggleKeys();
             }
 
-            // Preedit for Vietnamese until the Sen mode comes to this edition.
+            // As the IBus edition: Sen when the shared setting types straight into fields, else Preedit.
+            // In Sen the core picks for each word whether it goes into the field or the preedit.
             void applyMode() {
-                realMode = englishOn ? Mode::Off : Mode::Preedit;
+                realMode = englishOn ? Mode::Off : resources.settings().directTyping ? Mode::Sen : Mode::Preedit;
             }
 
             // The word ends in the mode it was typed in, and the core drops what it held for it.
@@ -70,6 +71,9 @@ namespace ngosen {
                 state->commitBuffer();
                 state->resetAfterAppCommit(false);
                 applyMode();
+                // Still the same field, so Sen keeps what it learned of it.
+                if (realMode == Mode::Sen)
+                    state->activate(Mode::Sen, false);
             }
 
             void readToggleKeys() {
@@ -96,8 +100,10 @@ namespace ngosen {
                 }
                 const unsigned before = resources.generation();
                 resources.reloadIfChanged();
-                if (resources.generation() != before)
+                if (resources.generation() != before) {
+                    applyMode();
                     state->setEngine();
+                }
                 readToggleKeys();
             }
 
@@ -122,6 +128,9 @@ namespace ngosen {
             void focusIn() {
                 applyNewSettings();
                 applyMode();
+                // The per-field checks of Sen start over, as the fcitx5 frontend does on focus-in.
+                if (realMode == Mode::Sen)
+                    state->activate(Mode::Sen, true);
             }
 
             // A change the app made itself, as on a click, is left to the core as fcitx5's

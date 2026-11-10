@@ -79,7 +79,18 @@ Before each commit the daemon reads pending events without blocking, so the seri
 `deactivate` arrived, nothing is committed, and what was gathered is dropped.
 
 On focus out the core drops the word being typed: a commit after `deactivate` would be stale, and the
-word must not reach the next field. A password or PIN purpose skips the core; keys go to vk as typed.
+word must not reach the next field.
+
+The mode follows the shared `DirectTyping` setting, as in the IBus edition: Sen when it is on (the
+default), Preedit when off. Sen starts its per-field checks over on each `activate`, as fcitx5 does on
+focus in. In Sen the core deletes through `delete_surrounding_text` when the field reports the word,
+and with BackSpace keys on the virtual keyboard otherwise (the first word of an empty field, or a
+field that sends no `surrounding_text`).
+
+A click moves the cursor without a key, and the app reports it only as `text_change_cause` other,
+which the daemon leaves alone (above). The core then takes the next keys as the rest of the word
+before the click and deletes from the wrong place, as fcitx5's own frontend does on Sway; the wire
+test keeps this as a known core failure. A password or PIN purpose skips the core; keys go to vk as typed.
 
 ## Keys
 
