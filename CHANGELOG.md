@@ -25,3 +25,8 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   Bấm chuột vào giữa một chữ rồi gõ tiếp vẫn có thể sửa nhầm chữ cũ, giống bản fcitx5 trên Sway và Hyprland (#7).
 - Nhớ chế độ gõ và lựa chọn Anh/Việt theo từng app như bản IBus và fcitx5, dùng chung tệp cài đặt; app được nhận ra
   qua cửa sổ đang chọn của compositor; app Flatpak mang tên như bản IBus đặt (#8).
+
+### Sửa
+
+- Gõ Sen trong Chromium và Firefox sửa dấu bằng cách xoá thẳng trong ô như bản fcitx5, không còn gửi phím xoá rồi
+  chờ tới nửa giây mỗi lần đặt dấu (#9).

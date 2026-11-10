@@ -26,7 +26,7 @@ namespace {
     // evdev codes
     constexpr uint32_t KeyA = 30, KeyS = 31, KeyZ = 44, KeyLeftShift = 42, KeyLeftCtrl = 29, KeyLeftAlt = 56;
     constexpr uint32_t KeyC = 46, KeyH = 35, KeyO = 24, KeyF = 33, KeySpace = 57;
-    constexpr uint32_t KeyV = 47, KeyI = 23, KeyE = 18, KeyJ = 36, KeyT = 20, KeyN = 49, KeyG = 34;
+    constexpr uint32_t KeyV = 47, KeyI = 23, KeyE = 18, KeyJ = 36, KeyT = 20, KeyN = 49, KeyG = 34, KeyBackspace = 14;
     constexpr uint32_t PurposePassword = 8, CauseOther = 1;
     // Modifier bits of the us keymap the test compositor sends.
     constexpr uint32_t ShiftBit = 1U << 0, CtrlBit = 1U << 2, AltBit = 1U << 3;
@@ -103,6 +103,11 @@ namespace {
             compositor.count("vk.key " + std::to_string(KeyA) + " 1") == compositor.count("vk.key " + std::to_string(KeyA) + " 0");
     }
 
+    // Empty commits answer each done and change nothing in the field.
+    bool sendsNoText(const TestCompositor& compositor) {
+        return compositor.count("im.commit_string ") + compositor.count("im.preedit ") + compositor.count("im.delete ") == 0;
+    }
+
     void testPassthrough() {
         TestCompositor compositor({});
         check(begin(compositor, "passthrough"), "the daemon binds the input method and a virtual keyboard", &compositor);
@@ -114,7 +119,7 @@ namespace {
         const auto keys = compositor.lines("vk.key ");
         check(keys.size() >= 4 && keys[0] == "vk.key 30 1" && keys[1] == "vk.key 30 0" && keys[2] == "vk.key 31 1" && keys[3] == "vk.key 31 0", "keys pass in the order they came",
               &compositor);
-        check(compositor.count("im.") == 1 /* im.create */, "plain passthrough sends nothing to the field", &compositor);
+        check(sendsNoText(compositor), "plain passthrough sends nothing to the field", &compositor);
         compositor.stop();
         check(!compositor.logged("error: a second grab while one is held"), "one grab at a time", &compositor);
     }
@@ -408,7 +413,7 @@ namespace {
             compositor.clearLog();
             type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF});
             check(compositor.barrier(), "barrier in a password field", &compositor);
-            check(compositor.count("im.") == 0, "a password field gets no preedit", &compositor);
+            check(sendsNoText(compositor), "a password field gets no preedit", &compositor);
             const auto keys = compositor.lines("vk.key ");
             check(keys.size() >= 10 && keys[0] == "vk.key 46 1" && keys[8] == "vk.key 33 1", "a password field gets the keys as typed", &compositor);
             compositor.stop();
@@ -472,6 +477,38 @@ namespace {
             // ệ is three bytes and replaces ê, two: a count in characters would cut into "Xin".
             check(fieldShows(compositor, "Xin việt "), "deletes count bytes, so text before the word stays", &compositor);
             check(compositor.count("im.delete ") > 0, "a field that shows the word is edited through surrounding text", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-after-commit", "", Language::Vietnamese), "setup for a field that reports after a commit", &compositor);
+            compositor.setReportsOnCommit(true);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a field that reports after a commit", &compositor);
+            // At a person's pace, so each report can come back before the next key.
+            for (uint32_t key : {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace}) {
+                compositor.tap(key);
+                compositor.runFor(30);
+            }
+            check(fieldShows(compositor, "Xin việt "), "a field that reports after a commit gets the word", &compositor);
+            check(compositor.count("im.delete ") > 0, "a field that reports after a commit is edited through surrounding text", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyBackspace) + " ") == 0, "no BackSpace goes to a field that reports after a commit", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-old-copy", "", Language::Vietnamese), "setup for Firefox in Sen", &compositor);
+            compositor.setOldCopyAfterEdit(true);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for Firefox in Sen", &compositor);
+            for (uint32_t key : {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace}) {
+                compositor.tap(key);
+                compositor.runFor(30);
+            }
+            check(fieldShows(compositor, "Xin việt "), "Firefox gets the word", &compositor);
+            check(compositor.logged("im.commit_string "), "the core asks Firefox for a report with an empty commit", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyBackspace) + " ") == 0, "no BackSpace goes to Firefox after an edit", &compositor);
             compositor.stop();
         }
         {

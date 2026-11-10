@@ -107,13 +107,14 @@ namespace ngosen {
         }
         if (deleteBefore_ != 0 || deleteAfter_ != 0)
             im_.deleteSurrounding(deleteBefore_, deleteAfter_);
-        if (!commit_.empty())
+        if (!commit_.empty() || emptyCommit_)
             im_.commitString(commit_);
         if (!preedit_.empty())
             im_.setPreedit(preedit_);
         im_.commit();
         shownPreedit_ = preedit_;
         commit_.clear();
+        emptyCommit_  = false;
         deleteBefore_ = deleteAfter_ = 0;
     }
 
@@ -121,6 +122,7 @@ namespace ngosen {
         if (!commit_.empty() || deleteBefore_ != 0 || deleteAfter_ != 0)
             NGOSEN_DEBUG("Dropped what was not sent before the field went away");
         commit_.clear();
+        emptyCommit_ = false;
         preedit_.clear();
         shownPreedit_.clear();
         deleteBefore_ = deleteAfter_ = 0;
@@ -134,7 +136,7 @@ namespace ngosen {
 
     void WaylandHost::commitText(const std::string& text) {
         if (text.empty())
-            return;
+            emptyCommit_ = true;
         commit_ += text;
         dirty_ = true;
     }

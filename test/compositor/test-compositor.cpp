@@ -83,7 +83,8 @@ namespace test {
         // Input method.
         void imCommitString(wl_client*, wl_resource* resource, const char* text) {
             of(resource)->note(std::string("im.commit_string ") + text);
-            of(resource)->field_.commitText = text;
+            of(resource)->field_.commitText      = text;
+            of(resource)->field_.gotCommitString = true;
         }
         void imSetPreedit(wl_client*, wl_resource* resource, const char* text, int32_t begin, int32_t end) {
             of(resource)->note(std::string("im.preedit ") + text + " " + std::to_string(begin) + " " + std::to_string(end));
@@ -99,7 +100,12 @@ namespace test {
             // A compositor may drop a commit that names an old done; the field model applies it but says so.
             if (serial != of(resource)->dones_)
                 of(resource)->note("stale commit " + std::to_string(serial) + " of " + std::to_string(of(resource)->dones_));
-            of(resource)->fieldCommit();
+            TestCompositor* compositor  = of(resource);
+            compositor->awaitingAnswer_ = false;
+            compositor->fieldCommit();
+            if (compositor->owedReport_ && compositor->field_.open) {
+                compositor->deliverReport(compositor->owedCause_);
+            }
         }
         void imPopup(wl_client*, wl_resource*, uint32_t, wl_resource*) {}
         void imGrab(wl_client* client, wl_resource* resource, uint32_t id) {
@@ -505,11 +511,13 @@ namespace test {
             vkKeymap_       = xkb_keymap_new_from_string(xkb_, keys.c_str(), XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
             vkState_        = xkb_state_new(vkKeymap_);
         }
-        field_         = Field{};
-        field_.open    = true;
-        field_.reports = reports;
-        field_.text    = text;
-        field_.cursor  = static_cast<uint32_t>(text.size());
+        field_          = Field{};
+        owedReport_     = false;
+        awaitingAnswer_ = reportsOnCommit_ && reports;
+        field_.open     = true;
+        field_.reports  = reports;
+        field_.text     = text;
+        field_.cursor   = static_cast<uint32_t>(text.size());
         activate();
         if (reports)
             surrounding(field_.text, field_.cursor, field_.cursor);
@@ -529,8 +537,12 @@ namespace test {
     void TestCompositor::fieldCommit() {
         if (!field_.open)
             return;
-        const uint32_t start = field_.cursor >= field_.deleteBefore ? field_.cursor - field_.deleteBefore : 0;
-        const uint32_t end   = std::min<uint32_t>(field_.cursor + field_.deleteAfter, static_cast<uint32_t>(field_.text.size()));
+        const std::string oldText   = field_.text;
+        const uint32_t    oldCursor = field_.cursor;
+        const bool        asked     = field_.gotCommitString;
+        field_.gotCommitString      = false;
+        const uint32_t start        = field_.cursor >= field_.deleteBefore ? field_.cursor - field_.deleteBefore : 0;
+        const uint32_t end          = std::min<uint32_t>(field_.cursor + field_.deleteAfter, static_cast<uint32_t>(field_.text.size()));
         field_.text.erase(start, end - start);
         field_.cursor = start;
         field_.text.insert(field_.cursor, field_.commitText);
@@ -540,7 +552,15 @@ namespace test {
         field_.deleteBefore = field_.deleteAfter = 0;
         field_.commitText.clear();
         field_.nextPreedit.clear();
-        if (changed)
+        if (oldCopyAfterEdit_ && changed) {
+            field_.showsOldCopy = true;
+            if (field_.reports)
+                sendReport(oldText, oldCursor, 0);
+            return;
+        }
+        if (field_.showsOldCopy && asked)
+            field_.showsOldCopy = false;
+        if (changed || asked)
             reportField(0);
     }
 
@@ -570,7 +590,8 @@ namespace test {
             field_.text.insert(field_.cursor, typed);
             field_.cursor += static_cast<uint32_t>(typed.size());
         }
-        reportField(1);
+        if (!field_.showsOldCopy)
+            reportField(1);
     }
 
     void TestCompositor::fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
@@ -581,6 +602,16 @@ namespace test {
     void TestCompositor::reportField(uint32_t cause) {
         if (!field_.reports)
             return;
+        if (reportsOnCommit_ && awaitingAnswer_) {
+            owedReport_ = true;
+            owedCause_  = cause;
+            return;
+        }
+        deliverReport(cause);
+    }
+
+    void TestCompositor::deliverReport(uint32_t cause) {
+        owedReport_ = false;
         if (replyDelayMs_ <= 0) {
             sendReport(field_.text, field_.cursor, cause);
             return;
@@ -618,6 +649,7 @@ namespace test {
         if (im_ == nullptr)
             return;
         note("field " + text + "|" + std::to_string(cursor));
+        awaitingAnswer_ = reportsOnCommit_;
         surrounding(text, cursor, cursor);
         this->cause(cause);
         done(false);

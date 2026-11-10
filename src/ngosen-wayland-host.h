@@ -59,6 +59,11 @@ namespace ngosen {
         void flush();
         // Drops what gathered: the field went away, and nothing may reach the next one.
         void dropPending();
+        // Makes the next flush commit even with nothing new. Chromium reports surrounding text only
+        // after the text-input done that our commit causes, as fcitx5 relies on.
+        void answerDone() {
+            dirty_ = true;
+        }
         bool hasPreedit() const {
             return !preedit_.empty();
         }
@@ -105,10 +110,12 @@ namespace ngosen {
         std::string preedit_;
         std::string shownPreedit_;
         std::string commit_;
-        uint32_t    deleteBefore_ = 0;
-        uint32_t    deleteAfter_  = 0;
-        bool        dirty_        = false;
-        uint32_t    keyTime_      = 0;
+        // The core sent an empty commit on purpose: GTK 3 asks the app for a new copy when one arrives.
+        bool     emptyCommit_  = false;
+        uint32_t deleteBefore_ = 0;
+        uint32_t deleteAfter_  = 0;
+        bool     dirty_        = false;
+        uint32_t keyTime_      = 0;
     };
 
 } // namespace ngosen

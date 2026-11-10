@@ -58,7 +58,7 @@ Nothing is sent while inactive or after a pending `deactivate` was read; the cal
 
 | Host call | Wire |
 | --- | --- |
-| `commitText` | gathered for im `commit_string` |
+| `commitText` | gathered for im `commit_string`; an empty one is sent as `commit_string("")`, which makes Firefox over GTK 3 report a new copy |
 | `showPreedit` / `clearPreedit` + `refreshPreedit` | gathered for im `set_preedit_string`, cursor at the end in bytes |
 | `deleteSurrounding(offset, size)` | as fcitx5: only a range that holds the cursor (`offset <= 0 <= offset + size`) can be sent; characters → bytes against the last surrounding text, gathered for `delete_surrounding_text(before, after)`. Anything else, or no valid surrounding text, is dropped and logged. |
 | `forwardKey`, `forwardKeyPress` | vk `key` with the evdev code; modifiers as below |
@@ -74,6 +74,11 @@ What is gathered goes in one `commit(serial)` after each event or timer, and bef
 commit reaches the field before the key that follows it. The order within it is the protocol's:
 `delete_surrounding_text`, `commit_string`, `set_preedit_string`. The preedit is sent with every
 commit while there is one, since a commit without it clears it.
+
+Every `done` applied while active is answered with a `commit(serial)`, empty if nothing gathered, as
+fcitx5 does. The compositor sends the app a text-input `done` for it, and Chromium sends its next
+`surrounding_text` only after that `done`; without the answer it stops reporting, and Sen falls back
+to BackSpace keys and the copy wait.
 
 Before each commit the daemon reads pending events without blocking, so the serial is the latest; if a
 `deactivate` arrived, nothing is committed, and what was gathered is dropped.
