@@ -418,6 +418,77 @@ namespace {
         }
     }
 
+    // Presses and releases of one key alternate, starting with a press and ending with a release.
+    bool alternates(const TestCompositor& compositor, uint32_t code) {
+        const auto lines = compositor.lines("vk.key " + std::to_string(code) + " ");
+        for (std::size_t i = 0; i < lines.size(); ++i) {
+            if (lines[i] != "vk.key " + std::to_string(code) + (i % 2 == 0 ? " 1" : " 0"))
+                return false;
+        }
+        return !lines.empty() && lines.size() % 2 == 0;
+    }
+
+    void testRepeat() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "repeat") && focus(compositor), "setup for repeat", &compositor);
+            // Fast, so the test is short: a repeat every 10 ms after 50 ms.
+            compositor.repeatInfo(100, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(300);
+            compositor.key(KeyA, false);
+            // No other key yet: a new press would end the repeat by itself.
+            compositor.runFor(50);
+            const std::size_t atRelease = compositor.count("vk.key " + std::to_string(KeyA) + " ");
+            compositor.runFor(200);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " ") == atRelease, "repeat stops when the key is let go", &compositor);
+            check(compositor.barrier(), "barrier after a held key", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " 1") >= 5, "a held key repeats", &compositor);
+            check(alternates(compositor, KeyA), "each repeat is a release then a press, and the last is let go", &compositor);
+
+            compositor.clearLog();
+            compositor.key(KeyLeftShift, true);
+            compositor.runFor(200);
+            compositor.key(KeyLeftShift, false);
+            check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyLeftShift) + " 1") == 1, "modifiers do not repeat", &compositor);
+
+            compositor.repeatInfo(0, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(200);
+            compositor.key(KeyA, false);
+            check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyA) + " 1") == 1, "rate 0 turns repeat off", &compositor);
+
+            compositor.repeatInfo(100, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(150);
+            compositor.deactivate();
+            compositor.done();
+            compositor.runFor(50);
+            const std::size_t atFocusLoss = compositor.count("vk.key " + std::to_string(KeyA) + " ");
+            compositor.runFor(200);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " ") == atFocusLoss && alternates(compositor, KeyA),
+                  "repeat stops when the field loses focus, with the key let go", &compositor);
+            compositor.key(KeyA, false);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "repeat-word", "", Language::Vietnamese) && focus(compositor), "setup for a held letter", &compositor);
+            compositor.repeatInfo(100, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(300);
+            compositor.key(KeyA, false);
+            check(compositor.waitFor([&] { return compositor.lines("im.preedit ").size() >= 3; }), "a held letter repeats into the word", &compositor);
+            compositor.runFor(50);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " ") == 0, "the app gets no key for repeats the core took", &compositor);
+            compositor.stop();
+        }
+    }
+
     void testExits() {
         {
             TestCompositor::Options options;
@@ -480,6 +551,7 @@ int main(int argc, char** argv) {
     testReviewCases();
     testToggleKey();
     testPreedit();
+    testRepeat();
     fs::remove_all(root);
     if (failures == 0)
         std::cout << "all wire checks passed\n";
