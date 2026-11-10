@@ -23,6 +23,8 @@ target_link_libraries(ngosen_shared PUBLIC ngosen_core PkgConfig::GIO PkgConfig:
 add_library(ngosen_wayland STATIC
     ngosen-daemon.cpp
     ngosen-input-method.cpp
+    ngosen-toggle-key.cpp
+    ngosen-wayland-key.cpp
 )
 target_include_directories(ngosen_wayland PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ngosen_wayland PUBLIC ngosen_shared ngosen_protocols_client)
