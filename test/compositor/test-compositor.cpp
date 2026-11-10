@@ -96,6 +96,9 @@ namespace test {
         }
         void imCommit(wl_client*, wl_resource* resource, uint32_t serial) {
             of(resource)->note("im.commit " + std::to_string(serial));
+            // A compositor may drop a commit that names an old done; the field model applies it but says so.
+            if (serial != of(resource)->dones_)
+                of(resource)->note("stale commit " + std::to_string(serial) + " of " + std::to_string(of(resource)->dones_));
             of(resource)->fieldCommit();
         }
         void imPopup(wl_client*, wl_resource*, uint32_t, wl_resource*) {}
@@ -230,6 +233,8 @@ namespace test {
             xkb_keymap_unref(vkKeymap_);
         if (xkb_ != nullptr)
             xkb_context_unref(xkb_);
+        if (lateTimer_ != nullptr)
+            wl_event_source_remove(lateTimer_);
         wl_display_destroy_clients(display_);
         wl_display_destroy(display_);
         std::string command = "rm -rf '" + runtimeDir_ + "'";
@@ -320,6 +325,7 @@ namespace test {
         zwp_input_method_v2_send_activate(im_);
     }
     void TestCompositor::deactivate() {
+        field_.open = false;
         zwp_input_method_v2_send_deactivate(im_);
     }
     void TestCompositor::surrounding(const std::string& text, uint32_t cursor, uint32_t anchor) {
@@ -560,16 +566,6 @@ namespace test {
             xkb_state_update_mask(vkState_, depressed, latched, locked, 0, 0, group);
     }
 
-    namespace {
-        struct LateReport {
-            TestCompositor*  compositor;
-            std::string      text;
-            uint32_t         cursor;
-            uint32_t         cause;
-            wl_event_source* source = nullptr;
-        };
-    } // namespace
-
     void TestCompositor::reportField(uint32_t cause) {
         if (!field_.reports)
             return;
@@ -578,18 +574,32 @@ namespace test {
             return;
         }
         // Sent as the field was when it changed, so a late report can be stale by the time it lands.
-        auto* late   = new LateReport{this, field_.text, field_.cursor, cause};
-        late->source = wl_event_loop_add_timer(
-            wl_display_get_event_loop(display_),
-            [](void* data) {
-                auto* late = static_cast<LateReport*>(data);
-                late->compositor->sendReport(late->text, late->cursor, late->cause);
-                wl_event_source_remove(late->source);
-                delete late;
-                return 0;
-            },
-            late);
-        wl_event_source_timer_update(late->source, replyDelayMs_);
+        const auto due = std::chrono::steady_clock::now() + std::chrono::milliseconds(replyDelayMs_);
+        lateReports_.push_back({field_.text, field_.cursor, cause, due});
+        if (lateTimer_ == nullptr) {
+            lateTimer_ = wl_event_loop_add_timer(
+                wl_display_get_event_loop(display_),
+                [](void* data) {
+                    static_cast<TestCompositor*>(data)->sendLateReports();
+                    return 0;
+                },
+                this);
+        }
+        if (lateReports_.size() == 1)
+            wl_event_source_timer_update(lateTimer_, replyDelayMs_);
+    }
+
+    void TestCompositor::sendLateReports() {
+        const auto now = std::chrono::steady_clock::now();
+        while (!lateReports_.empty() && lateReports_.front().due <= now) {
+            const LateReport report = lateReports_.front();
+            lateReports_.pop_front();
+            sendReport(report.text, report.cursor, report.cause);
+        }
+        if (!lateReports_.empty()) {
+            const auto wait = std::chrono::duration_cast<std::chrono::milliseconds>(lateReports_.front().due - now).count();
+            wl_event_source_timer_update(lateTimer_, static_cast<int>(std::max<long long>(wait, 1)));
+        }
     }
 
     void TestCompositor::sendReport(const std::string& text, uint32_t cursor, uint32_t cause) {

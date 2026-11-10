@@ -101,8 +101,12 @@ namespace ngosen {
                 const unsigned before = resources.generation();
                 resources.reloadIfChanged();
                 if (resources.generation() != before) {
+                    const Mode was = realMode;
                     applyMode();
                     state->setEngine();
+                    // A field focused in Preedit never got Sen's per-field checks.
+                    if (realMode == Mode::Sen && was != Mode::Sen)
+                        state->activate(Mode::Sen, false);
                 }
                 readToggleKeys();
             }

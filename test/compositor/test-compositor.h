@@ -5,7 +5,9 @@
  */
 #pragma once
 
+#include <chrono>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <string>
 #include <sys/types.h>
@@ -14,6 +16,7 @@
 struct wl_display;
 struct wl_resource;
 struct wl_global;
+struct wl_event_source;
 struct xkb_context;
 struct xkb_keymap;
 struct xkb_state;
@@ -165,12 +168,22 @@ namespace test {
         xkb_state*   vkState_      = nullptr;
         xkb_keymap*  vkKeymap_     = nullptr;
         xkb_context* xkb_          = nullptr;
+        struct LateReport {
+            std::string                           text;
+            uint32_t                              cursor;
+            uint32_t                              cause;
+            std::chrono::steady_clock::time_point due;
+        };
+        // One timer for every pending report, so the destructor can free what is still waiting.
+        std::deque<LateReport> lateReports_;
+        wl_event_source*       lateTimer_ = nullptr;
 
-        void         fieldCommit();
-        void         fieldKey(uint32_t code, bool pressed);
-        void         fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
-        void         reportField(uint32_t cause);
-        void         sendReport(const std::string& text, uint32_t cursor, uint32_t cause);
+        void                   sendLateReports();
+        void                   fieldCommit();
+        void                   fieldKey(uint32_t code, bool pressed);
+        void                   fieldModifiers(uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group);
+        void                   reportField(uint32_t cause);
+        void                   sendReport(const std::string& text, uint32_t cursor, uint32_t cause);
     };
 
 } // namespace test
