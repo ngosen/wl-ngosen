@@ -5,29 +5,72 @@
  */
 #include "ngosen-daemon.h"
 
+#include "ngosen-ibus-config.h"
+#include "ngosen-ibus-resources.h"
 #include "ngosen-input-method.h"
 #include "ngosen-log.h"
+#include "ngosen-masks.h"
+#include "ngosen-toggle-key.h"
+#include "ngosen-wayland-key.h"
 
 #include <glib-unix.h>
 #include <glib.h>
 #include <signal.h>
 #include <wayland-client.h>
+#include <xkbcommon/xkbcommon.h>
 
 namespace ngosen {
 
     namespace {
 
         struct Daemon {
-            InputMethod im;
-            GMainLoop*  loop   = nullptr;
-            int         status = 0;
+            InputMethod   im;
+            IBusResources resources{SettingsPaths::fromEnvironment()};
+            ToggleKey     toggle;
+            unsigned      chordsGeneration = ~0U;
+            // What the toggle key last chose; shared with the IBus edition through its marker file.
+            bool       englishOn = readEnglishOn(resources.paths());
+            GMainLoop* loop      = nullptr;
+            int        status    = 0;
 
-            void        handleKey(const ImEvent& event) {
-                im.sendKey(event.time, event.code, event.pressed);
+            void       applyNewSettings() {
+                if (resources.takeEnglishChange())
+                    englishOn = readEnglishOn(resources.paths());
+                resources.reloadIfChanged();
+                if (chordsGeneration == resources.generation())
+                    return;
+                std::vector<KeyChord> chords;
+                for (const auto& key : resources.settings().toggleKeys) {
+                    if (const auto chord = parseToggleKey(key))
+                        chords.push_back(*chord);
+                }
+                toggle.setChords(std::move(chords));
+                chordsGeneration = resources.generation();
+            }
+
+            void toggleLanguage() {
+                englishOn = !englishOn;
+                if (!saveEnglishOn(resources.paths(), englishOn))
+                    NGOSEN_WARN("Cannot save the language");
+                NGOSEN_INFO(std::string("Toggle key: ") + (englishOn ? "English" : "Vietnamese"));
+            }
+
+            void handleKey(const ImEvent& event) {
+                applyNewSettings();
+                xkb_state*              state  = im.xkbState();
+                const uint32_t          sym    = state != nullptr ? xkb_state_key_get_one_sym(state, event.code + 8) : XKB_KEY_NoSymbol;
+                const uint32_t          mods   = xStateOf(state) | (event.pressed ? 0 : ReleaseMask);
+                const ToggleKey::Result result = toggle.feed(sym, mods, event.time);
+                if (result.toggle)
+                    toggleLanguage();
+                if (!result.swallow)
+                    im.sendKey(event.time, event.code, event.pressed);
             }
 
             void handle(const ImEvent& event) {
                 im.apply(event);
+                if (event.kind == ImEvent::Kind::Done && event.focusChanged)
+                    toggle.reset();
                 switch (event.kind) {
                     case ImEvent::Kind::Key: handleKey(event); break;
                     case ImEvent::Kind::Unavailable:

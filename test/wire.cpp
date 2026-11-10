@@ -9,6 +9,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -22,7 +23,9 @@ namespace {
     fs::path    root;
 
     // evdev codes
-    constexpr uint32_t KeyA = 30, KeyS = 31, KeyLeftShift = 42;
+    constexpr uint32_t KeyA = 30, KeyS = 31, KeyZ = 44, KeyLeftShift = 42, KeyLeftCtrl = 29, KeyLeftAlt = 56;
+    // Modifier bits of the us keymap the test compositor sends.
+    constexpr uint32_t ShiftBit = 1U << 0, CtrlBit = 1U << 2, AltBit = 1U << 3;
 
     void               check(bool ok, const std::string& what, const TestCompositor* compositor = nullptr) {
         if (ok)
@@ -40,8 +43,13 @@ namespace {
     }
 
     // Starts the daemon and waits until it has the input method object.
-    bool begin(TestCompositor& compositor, const std::string& name) {
-        compositor.start(program, freshHome(name));
+    bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "") {
+        const std::string home = freshHome(name);
+        if (!settings.empty()) {
+            fs::create_directories(fs::path(home) / ".config/ngosen");
+            std::ofstream(fs::path(home) / ".config/ngosen/ngosen.conf") << settings;
+        }
+        compositor.start(program, home);
         return compositor.waitFor([&] { return compositor.hasClient() && compositor.logged("vk.create"); });
     }
 
@@ -236,6 +244,55 @@ namespace {
         }
     }
 
+    bool englishMark(const std::string& name) {
+        return fs::exists(root / name / ".local/state/ngosen/english");
+    }
+
+    // Ctrl+Shift as a compositor sends it: each key, then the modifiers it leaves.
+    void tapCtrlShift(TestCompositor& compositor) {
+        compositor.key(KeyLeftCtrl, true);
+        compositor.modifiers(CtrlBit, 0, 0, 0);
+        compositor.key(KeyLeftShift, true);
+        compositor.modifiers(CtrlBit | ShiftBit, 0, 0, 0);
+        compositor.key(KeyLeftShift, false);
+        compositor.modifiers(CtrlBit, 0, 0, 0);
+        compositor.key(KeyLeftCtrl, false);
+        compositor.modifiers(0, 0, 0, 0);
+    }
+
+    void testToggleKey() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "toggle") && focus(compositor), "setup for the toggle key", &compositor);
+            check(!englishMark("toggle"), "a new user starts in Vietnamese");
+            tapCtrlShift(compositor);
+            check(compositor.barrier(), "barrier after Ctrl+Shift", &compositor);
+            check(englishMark("toggle"), "a tap of Ctrl+Shift switches to English, shared with the IBus edition", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyLeftShift) + " ") == 2 && compositor.count("vk.key " + std::to_string(KeyLeftCtrl) + " ") == 2,
+                  "the app sees Ctrl and Shift, as with fcitx5", &compositor);
+            tapCtrlShift(compositor);
+            check(compositor.barrier(), "barrier after the second Ctrl+Shift", &compositor);
+            check(!englishMark("toggle"), "a second tap switches back to Vietnamese", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "toggle-letter", "ToggleKey=Alt+z\n") && focus(compositor), "setup for Alt+Z", &compositor);
+            compositor.key(KeyLeftAlt, true);
+            compositor.modifiers(AltBit, 0, 0, 0);
+            compositor.tap(KeyZ);
+            compositor.key(KeyLeftAlt, false);
+            compositor.modifiers(0, 0, 0, 0);
+            check(compositor.barrier(), "barrier after Alt+Z", &compositor);
+            check(englishMark("toggle-letter"), "Alt+Z switches to English", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyZ) + " ") == 0, "the app sees neither the press nor the release of Z", &compositor);
+            check(balanced(compositor), "every key the app saw is let go", &compositor);
+            compositor.tap(KeyZ);
+            check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyZ) + " ") == 2, "a plain z still types", &compositor);
+            compositor.stop();
+        }
+    }
+
     void testExits() {
         {
             TestCompositor::Options options;
@@ -296,6 +353,7 @@ int main(int argc, char** argv) {
     testKeymaps();
     testExits();
     testReviewCases();
+    testToggleKey();
     fs::remove_all(root);
     if (failures == 0)
         std::cout << "all wire checks passed\n";

@@ -15,3 +15,5 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   fcitx5 như bản IBus (#2).
 - Chạy được trên compositor có input-method-v2: nhận phím rồi gửi lại nguyên vẹn, chưa gõ tiếng Việt; compositor không
   hỗ trợ (GNOME, KDE) thì thoát êm (#3).
+- Phím đổi Anh/Việt (mặc định Ctrl+Shift, đổi được trong cài đặt) chạy như bản IBus và fcitx5; lựa chọn Anh/Việt dùng chung
+  với bản IBus (#4).
