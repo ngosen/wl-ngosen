@@ -11,10 +11,14 @@
 #include "ngosen-keysym.h"
 #include "ngosen-input-method.h"
 #include "ngosen-log.h"
+#include "ngosen-ibus-i18n.h"
+#include "ngosen-ibus-typing-log.h"
 #include "ngosen-masks.h"
 #include "ngosen-globals.h"
+#include "ngosen-notice.h"
 #include "ngosen-state.h"
 #include "ngosen-toggle-key.h"
+#include "ngosen-tray.h"
 #include "ngosen-wayland-host.h"
 #include "ngosen-wayland-key.h"
 
@@ -46,6 +50,9 @@ namespace ngosen {
             std::string modeApp;
             GMainLoop*  loop   = nullptr;
             int         status = 0;
+            // Null without a session bus.
+            std::unique_ptr<Tray> tray;
+            Notice                notice;
             // The held key. The grab sends a key once; as in fcitx5, the input method repeats it.
             struct {
                 uint32_t code   = 0;
@@ -63,6 +70,71 @@ namespace ngosen {
                 applyMode();
                 state = std::make_unique<TypingState>(&typing, std::move(wayland));
                 readToggleKeys();
+                tray = std::make_unique<Tray>(
+                    Tray::Handlers{[this] { fromTray([this] { toggleLanguage(); }); }, [this](const std::string& action) { fromTray([this, action] { trayClick(action); }); }});
+                if (!tray->start())
+                    tray.reset();
+                // The settings window and the IBus edition write the files while no key comes.
+                resources.onChange([this] { showTray(); });
+                showTray();
+            }
+
+            void showTray() {
+                const IBusSettings saved = resources.savedSettings();
+                setUiEnglish(saved.uiLanguage == "English");
+                if (tray)
+                    tray->show(trayMenu(saved, {englishOn, modeApp, realMode}), englishOn);
+            }
+
+            // A click can end the word being typed, which goes out at once, as after a key.
+            void fromTray(const std::function<void()>& action) {
+                action();
+                host->flush();
+                im.flush();
+                showTray();
+            }
+
+            void trayClick(const std::string& action) {
+                if (action == LanguageAction) {
+                    toggleLanguage();
+                    return;
+                }
+                if (action == SaveTypingLogAction) {
+                    saveTypingLog(resources.recorder());
+                    return;
+                }
+                if (const auto mode = modeOfAction(action)) {
+                    pickMode(*mode);
+                    return;
+                }
+                std::string  key, value;
+                IBusSettings saved;
+                if (settingForClick(action, resources.savedSettings(), key, value) && !resources.saveSetting(key, value, saved))
+                    NGOSEN_WARN("Cannot save " + key);
+            }
+
+            // As the IBus edition's mode menu: kept for the app in use; an app without a name changes
+            // the shared language and mode instead.
+            void pickMode(MenuMode mode) {
+                const std::string app = currentApp();
+                if (!app.empty()) {
+                    const Mode shared = resources.settings().directTyping ? Mode::Sen : Mode::Preedit;
+                    if (!appModes.set(app, keptAppMode(mode, englishOn, shared)) || !appSwitches.set(app, std::nullopt))
+                        NGOSEN_WARN("Cannot save the typing mode for " + app);
+                    switchMode();
+                    return;
+                }
+                if (const bool english = mode == MenuMode::Off; english != englishOn) {
+                    englishOn = english;
+                    if (!saveEnglishOn(resources.paths(), englishOn))
+                        NGOSEN_WARN("Cannot save the language");
+                }
+                IBusSettings saved;
+                const bool   direct = mode == MenuMode::Sen;
+                // Applied at once, since the next key may come before the file monitor reports the write.
+                if (mode != MenuMode::Off && resources.settings().directTyping != direct && resources.saveSetting("DirectTyping", direct ? "True" : "False", saved))
+                    resources.noticeChange();
+                switchMode();
             }
 
             std::string currentApp() const {
@@ -85,11 +157,17 @@ namespace ngosen {
             }
 
             void applyMode() {
-                if (const std::string app = currentApp(); app != modeApp) {
+                const std::string app     = currentApp();
+                const bool        changed = app != modeApp;
+                if (changed) {
                     modeApp = app;
                     NGOSEN_INFO("App: " + (app.empty() ? std::string("(none)") : app));
                 }
-                realMode = typingMode(modeApp);
+                const Mode was = realMode;
+                realMode       = typingMode(modeApp);
+                // The menu names the app and checks its mode.
+                if (changed || realMode != was)
+                    showTray();
             }
 
             // The word ends in the mode it was typed in, and the core drops what it held for it.
@@ -266,8 +344,11 @@ namespace ngosen {
                     return;
                 }
                 const ToggleKey::Result result = toggle.feed(sym, mods, event.time);
-                if (result.toggle)
+                if (result.toggle) {
                     toggleLanguage();
+                    // No mark in the field says which language is on, so the desktop shows it.
+                    notice.show(englishOn ? _("English") : _("Vietnamese"), englishOn ? "wl-ngosen-off" : "wl-ngosen");
+                }
                 if (result.swallow) {
                     host->flush();
                     return;
