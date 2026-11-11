@@ -152,6 +152,7 @@ namespace ngosen {
         }
         menu.push_back(separator());
         menu.push_back(item(SaveTypingLogAction, _("Save typing log")));
+        menu.push_back(item(SettingsAction, _("Settings")));
         return menu;
     }
 

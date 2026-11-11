@@ -55,6 +55,7 @@ namespace ngosen {
 
     constexpr const char* LanguageAction      = "InputMode";
     constexpr const char* SaveTypingLogAction = "SaveTypingLog";
+    constexpr const char* SettingsAction      = "SettingsWindow";
 
     // The fcitx5 edition's tray menu, with the IBus edition's mode menu in place of its field menu.
     std::vector<TrayItem> trayMenu(const IBusSettings& settings, const TrayView& view);

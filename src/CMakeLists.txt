@@ -34,7 +34,8 @@ add_library(ngosen_wayland STATIC
 target_include_directories(ngosen_wayland PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ngosen_wayland PUBLIC ngosen_shared ngosen_protocols_client)
 # Bars look the icon up in the theme by name, or in this directory.
-target_compile_definitions(ngosen_wayland PRIVATE NGOSEN_ICONDIR="${CMAKE_INSTALL_FULL_DATADIR}/icons")
+target_compile_definitions(ngosen_wayland PRIVATE NGOSEN_ICONDIR="${CMAKE_INSTALL_FULL_DATADIR}/icons"
+    NGOSEN_SETTINGS_EXEC="${CMAKE_INSTALL_FULL_BINDIR}/wl-ngosen-settings")
 
 add_executable(wl-ngosen main.cpp)
 target_compile_definitions(wl-ngosen PRIVATE NGOSEN_LOCALEDIR="${CMAKE_INSTALL_FULL_LOCALEDIR}")

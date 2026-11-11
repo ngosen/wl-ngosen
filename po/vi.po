@@ -64,8 +64,750 @@ msgstr "Từ điển tuỳ chỉnh"
 msgid "Save typing log"
 msgstr "Lưu nhật ký gõ"
 
+msgid "Settings"
+msgstr "Cài đặt"
+
 msgid "Typing log saved: "
 msgstr "Đã lưu nhật ký gõ: "
 
 msgid "Could not save the typing log to "
 msgstr "Không lưu được nhật ký gõ vào "
+
+#: settings/ngosen_settings/backup.py
+msgid "A switch key here needs Ctrl, Alt, Shift or Super with another key."
+msgstr "Ở bản này, phím chuyển cần Ctrl, Alt, Shift hoặc Super đi kèm một phím khác."
+
+#: settings/ngosen_settings/backup.py
+msgid "The settings in the file are damaged."
+msgstr "Phần cài đặt trong tệp bị hỏng."
+
+#: settings/ngosen_settings/backup.py
+msgid "No settings found in the file."
+msgstr "Tệp không có cài đặt nào."
+
+#: settings/ngosen_settings/backup.py
+msgid "The dictionary in the file is damaged."
+msgstr "Phần từ điển trong tệp bị hỏng."
+
+#: settings/ngosen_settings/backup.py
+msgid "The current switch key stays."
+msgstr "Giữ phím chuyển Anh/Việt đang dùng."
+
+#: settings/ngosen_settings/backup.py
+msgid "The backup was made while typing English, so typing switches to English."
+msgstr "Bản sao lưu được tạo lúc đang gõ tiếng Anh, nên Ngó Sen sẽ chuyển sang gõ tiếng Anh."
+
+#: settings/ngosen_settings/backup.py
+msgid "Rules that pick emoji for an app are kept but do nothing here."
+msgstr "Luật chọn emoji cho từng app vẫn được giữ nhưng bản này không dùng."
+
+#: settings/ngosen_settings/backup.py
+msgid "The lists in the file are damaged."
+msgstr "Danh sách gõ tắt hoặc bảng phím trong tệp bị hỏng."
+
+#: settings/ngosen_settings/backup.py
+msgid "The file holds text that is not valid Unicode."
+msgstr "Tệp có chữ không phải Unicode hợp lệ."
+
+#: settings/ngosen_settings/backup.py
+msgid "This edition has no emoji picker, so words are underlined instead."
+msgstr "Bản này không có bảng chọn emoji, nên chữ sẽ gõ có gạch chân."
+
+#: settings/ngosen_settings/backup.py
+#, python-brace-format
+msgid "These files could not be put back: {}"
+msgstr "Không trả lại được các tệp này: {}"
+
+#: settings/ngosen_settings/backup.py
+#, python-brace-format
+msgid "These switch keys in the backup are left out: {}. {}"
+msgstr "Bỏ qua các phím chuyển Anh/Việt này trong bản sao lưu: {}. {}"
+
+#: settings/ngosen_settings/backup.py
+#, python-brace-format
+msgid "The backup types in a mode this edition does not know ({}), so the current one stays."
+msgstr "Bản sao lưu gõ ở chế độ mà bản này không biết ({}), nên giữ chế độ đang dùng."
+
+#: settings/ngosen_settings/keymap.py
+msgid "Remove the tone mark"
+msgstr "Xoá dấu thanh"
+
+#: settings/ngosen_settings/keymap.py
+msgid "Sắc tone"
+msgstr "Dấu sắc"
+
+#: settings/ngosen_settings/keymap.py
+msgid "Huyền tone"
+msgstr "Dấu huyền"
+
+#: settings/ngosen_settings/keymap.py
+msgid "Hỏi tone"
+msgstr "Dấu hỏi"
+
+#: settings/ngosen_settings/keymap.py
+msgid "Ngã tone"
+msgstr "Dấu ngã"
+
+#: settings/ngosen_settings/keymap.py
+msgid "Nặng tone"
+msgstr "Dấu nặng"
+
+#: settings/ngosen_settings/keymap.py
+msgid "Microsoft layout"
+msgstr "Bố cục Microsoft"
+
+#: settings/ngosen_settings/keymap.py
+msgid "VNI on a French keyboard"
+msgstr "VNI bàn phím tiếng Pháp"
+
+#: settings/ngosen_settings/keys.py
+msgid "Press at least two keys together."
+msgstr "Cần bấm ít nhất hai phím cùng lúc."
+
+#: settings/ngosen_settings/keys.py
+msgid "Shift with a key types a capital letter or a symbol."
+msgstr "Shift kèm một phím sẽ gõ ra chữ hoa hoặc ký hiệu."
+
+#: settings/ngosen_settings/keys.py
+msgid "GNOME already uses these keys."
+msgstr "GNOME đã dùng tổ hợp phím này."
+
+#: settings/ngosen_settings/keys.py
+msgid "Hold Ctrl, Alt, Shift or Super first, then press the other key."
+msgstr "Giữ Ctrl, Alt, Shift hoặc Super trước, rồi mới bấm phím còn lại."
+
+#: settings/ngosen_settings/keys.py
+msgid "Firefox and some other apps open their menu bar when Alt is let go."
+msgstr "Firefox và vài app khác sẽ mở thanh menu khi thả phím Alt."
+
+#: settings/ngosen_settings/keys.py
+msgid "Apps no longer get these keys: Ngó Sen takes them everywhere."
+msgstr "Các app sẽ không nhận tổ hợp này nữa: Ngó Sen dùng nó ở mọi nơi."
+
+#: settings/ngosen_settings/options.py
+msgid "Switch Between English and Vietnamese"
+msgstr "Phím chuyển Anh/Việt"
+
+#: settings/ngosen_settings/options.py
+msgid "Mode Menu Hotkey"
+msgstr "Phím tắt menu chế độ gõ"
+
+#: settings/ngosen_settings/options.py
+msgid "Cycle Mode Hotkey"
+msgstr "Phím tắt chuyển nhanh chế độ"
+
+#: settings/ngosen_settings/options.py
+msgid "Mode Order"
+msgstr "Thứ tự chế độ"
+
+#: settings/ngosen_settings/options.py
+msgid "Show Sen"
+msgstr "Hiển thị chế độ Gõ Sen"
+
+#: settings/ngosen_settings/options.py
+msgid "Show Preedit"
+msgstr "Hiển thị chế độ Gạch chân"
+
+#: settings/ngosen_settings/options.py
+msgid "Show OFF"
+msgstr "Hiển thị chế độ Tắt"
+
+#: settings/ngosen_settings/options.py
+msgid "Show Vim mode"
+msgstr "Hiển thị Vim mode"
+
+#: settings/ngosen_settings/options.py
+msgid "Interface Language"
+msgstr "Ngôn ngữ giao diện"
+
+#: settings/ngosen_settings/options.py
+msgid "Shortcut for Sen"
+msgstr "Phím tắt cho Gõ Sen"
+
+#: settings/ngosen_settings/options.py
+msgid "Shortcut for Preedit"
+msgstr "Phím tắt cho Gạch chân"
+
+#: settings/ngosen_settings/options.py
+msgid "Shortcut for OFF"
+msgstr "Phím tắt cho Tắt"
+
+#: settings/ngosen_settings/options.py
+msgid "Shortcut for Vim mode"
+msgstr "Phím tắt cho Vim mode"
+
+#: settings/ngosen_settings/options.py
+msgid "Mode"
+msgstr "Chế độ gõ"
+
+#: settings/ngosen_settings/options.py
+msgid "Output Charset"
+msgstr "Bảng mã"
+
+#: settings/ngosen_settings/options.py
+msgid "Custom Keymap"
+msgstr "Keymap tuỳ chỉnh"
+
+#: settings/ngosen_settings/options.py
+msgid "Enable Spell Check Using Dictionary"
+msgstr "Kiểm tra chính tả"
+
+#: settings/ngosen_settings/options.py
+msgid "Key to Keep the Word as Typed"
+msgstr "Phím chốt chữ"
+
+#: settings/ngosen_settings/options.py
+msgid "Allow dd To Produce đ When Auto Restore Invalid Words Is On"
+msgstr "Vẫn gõ dd ra đ khi tự khôi phục"
+
+#: settings/ngosen_settings/options.py
+msgid "Use oà, uý (Instead Of òa, úy)"
+msgstr "Bỏ dấu kiểu mới (oà, uý)"
+
+#: settings/ngosen_settings/options.py
+msgid "Allow Type With More Freedom"
+msgstr "Gõ tự do"
+
+#: settings/ngosen_settings/options.py
+msgid "Backspace Removes the Tone Mark"
+msgstr "Backspace xoá dấu thanh"
+
+#: settings/ngosen_settings/options.py
+msgid "Change the tone of a typed word"
+msgstr "Cứu dấu: sửa dấu chữ đã gõ"
+
+#: settings/ngosen_settings/options.py
+msgid "Retype text typed before switching on"
+msgstr "Cứu chữ: gõ lại có dấu khi quên bật tiếng Việt"
+
+#: settings/ngosen_settings/options.py
+msgid "Type w to Produce ư"
+msgstr "Gõ w ra ư"
+
+#: settings/ngosen_settings/options.py
+msgid "Type [ -> ơ, ] -> ư, { -> Ơ, } -> Ư"
+msgstr "Phím [ ] ra ơ ư"
+
+#: settings/ngosen_settings/options.py
+msgid "Auto capitalize after sentence-ending punctuation (. ! ? Enter)"
+msgstr "Tự viết hoa đầu câu (thử nghiệm)"
+
+#: settings/ngosen_settings/options.py
+msgid "Capitalize the first letter of the text or of a line"
+msgstr "Tự viết hoa chữ đầu văn bản và đầu dòng (thử nghiệm)"
+
+#: settings/ngosen_settings/options.py
+msgid "Double Space to Period"
+msgstr "Hai dấu cách thành dấu chấm (thử nghiệm)"
+
+#: settings/ngosen_settings/options.py
+msgid "Double Hyphen to Em-Dash (--)"
+msgstr "Hai gạch nối thành gạch dài"
+
+#: settings/ngosen_settings/options.py
+msgid "Enable Macro"
+msgstr "Bật gõ tắt"
+
+#: settings/ngosen_settings/options.py
+msgid "Macros while typing English"
+msgstr "Gõ tắt cả khi đang gõ tiếng Anh"
+
+#: settings/ngosen_settings/options.py
+msgid "Time Format ($TIME in macro)"
+msgstr "Định dạng giờ ($TIME trong gõ tắt)"
+
+#: settings/ngosen_settings/options.py
+msgid "Date Format ($DATE in macro)"
+msgstr "Định dạng ngày ($DATE trong macro)"
+
+#: settings/ngosen_settings/options.py
+msgid "Opens a menu to pick Sen, underlined typing or Off for the app in use. Press it twice to type the key itself; while typing English it types as usual."
+msgstr "Mở menu để chọn Gõ Sen, gạch chân hay Tắt cho app đang dùng. Bấm hai lần để gõ ra chính phím đó; lúc gõ tiếng Anh phím gõ như thường."
+
+#: settings/ngosen_settings/options.py
+msgid "Moves the app in use to the next mode in the list below, and remembers it for that app."
+msgstr "Chuyển app đang dùng sang chế độ kế tiếp trong danh sách bên dưới và nhớ cho app đó."
+
+#: settings/ngosen_settings/options.py
+msgid "Keep Unicode unless an old document or app needs another one, such as TCVN3 (ABC)."
+msgstr "Cứ để Unicode, trừ khi văn bản hay app cũ cần bảng mã khác như TCVN3 (ABC)."
+
+#: settings/ngosen_settings/options.py
+msgid "The keys below, used when the input method is Custom."
+msgstr "Các phím bên dưới, dùng khi kiểu gõ là Custom."
+
+#: settings/ngosen_settings/options.py
+msgid "Words that are not Vietnamese get no tone marks."
+msgstr "Từ không phải tiếng Việt thì không thêm dấu."
+
+#: settings/ngosen_settings/options.py
+msgid "Check spelling against the list below. Off: the list that comes with Ngó Sen."
+msgstr "Kiểm chính tả theo danh sách bên dưới. Tắt: dùng danh sách có sẵn của Ngó Sen."
+
+#: settings/ngosen_settings/options.py
+msgid "Typing windows still gives windows."
+msgstr "Gõ windows vẫn ra windows."
+
+#: settings/ngosen_settings/options.py
+msgid "Tap the key alone to keep the word as shown: tunx, Ctrl → tũn, with no restore or macro. Alt also shows the menu bar in some apps."
+msgstr "Bấm rồi thả riêng phím để giữ nguyên từ: tunx, Ctrl → tũn, không khôi phục hay bung macro. Alt còn hiện thanh menu ở một số app."
+
+#: settings/ngosen_settings/options.py
+msgid "dd and Space stays đ instead of going back to dd."
+msgstr "Gõ dd rồi dấu cách vẫn ra đ, không bị trả về dd."
+
+#: settings/ngosen_settings/options.py
+msgid "hoà, khoẻ, thuý, tuỳ. Off: hòa, khỏe, thúy, tùy."
+msgstr "hoà, khoẻ, thuý, tuỳ. Tắt: hòa, khỏe, thúy, tùy."
+
+#: settings/ngosen_settings/options.py
+msgid "Tone marks can also go at the end of the word."
+msgstr "Gõ dấu ở cuối từ cũng được."
+
+#: settings/ngosen_settings/options.py
+msgid "z in Telex (0 in VNI) removes the tone mark even with this off. On a word without one, Backspace deletes as usual."
+msgstr "Kể cả khi tắt mục này, phím z (Telex) hay 0 (VNI) vẫn xoá dấu thanh. Chữ không có dấu thanh thì Backspace xoá chữ như thường."
+
+#: settings/ngosen_settings/options.py
+msgid "Click right after chao, or select it in an X11 app, and type f to get chào. Only when typing with Sen; Tab or Esc puts the key back."
+msgstr "Bấm chuột ngay sau chao (hay bôi đen chao ở app X11) rồi gõ f để ra chào. Chỉ khi bật Gõ Sen; Tab hay Esc trả lại phím vừa gõ."
+
+#: settings/ngosen_settings/options.py
+msgid "Typed vieetj in English? Switch to Vietnamese and it becomes việt; Tab or Esc puts it back. Where a word may be English on purpose, Enter retypes and Tab or Esc keeps it."
+msgstr "Lỡ gõ vieetj lúc tiếng Anh? Chuyển sang tiếng Việt là thành việt; Tab hoặc Esc trả lại. Chữ có thể cố ý gõ tiếng Anh thì Enter để gõ lại, Tab hoặc Esc để giữ."
+
+#: settings/ngosen_settings/options.py
+msgid "Non-Start: nhw → như, but w alone stays w. Everywhere: w alone gives ư too. uw always gives ư."
+msgstr "Trong từ: nhw → như, còn w đứng riêng vẫn là w. Mọi nơi: w đứng riêng cũng ra ư. uw thì luôn ra ư."
+
+#: settings/ngosen_settings/options.py
+msgid "ch]a → chưa, m[f → mờ. Type a bracket twice to get it back: [[ → [."
+msgstr "ch]a → chưa, m[f → mờ. Gõ ngoặc hai lần để lấy lại dấu ngoặc: [[ → [."
+
+#: settings/ngosen_settings/options.py
+msgid "ban. tooi → ban. Tôi. The same after Enter."
+msgstr "ban. tooi → ban. Tôi. Sau Enter cũng vậy."
+
+#: settings/ngosen_settings/options.py
+msgid "ban and Space twice gives “ban. ”."
+msgstr "Gõ ban rồi hai dấu cách ra “ban. ”."
+
+#: settings/ngosen_settings/options.py
+msgid "a--b → a—b."
+msgstr "a--b → a—b."
+
+#: settings/ngosen_settings/options.py
+msgid "With Enable Macro on, a macro such as ko → không expands even in English."
+msgstr "Khi đã bật gõ tắt, từ gõ tắt như ko → không vẫn ra cả khi đang gõ tiếng Anh."
+
+#: settings/ngosen_settings/options.py
+msgid "Macros support dynamic placeholders: $TIME and $DATE."
+msgstr "Gõ tắt có thể sử dụng giữ chỗ động: $TIME (thời gian hiện tại) và $DATE (ngày hiện tại)."
+
+#: settings/ngosen_settings/options.py
+msgid "Disabled"
+msgstr "Tắt"
+
+#: settings/ngosen_settings/options.py
+msgid "Non-Start"
+msgstr "Trong từ"
+
+#: settings/ngosen_settings/options.py
+msgid "Everywhere"
+msgstr "Mọi nơi"
+
+#: settings/ngosen_settings/options.py
+msgid "Sen, Preedit, OFF"
+msgstr "Gõ Sen, Gạch chân, Tắt"
+
+#: settings/ngosen_settings/options.py
+msgid "Preedit, Sen, OFF"
+msgstr "Gạch chân, Gõ Sen, Tắt"
+
+#: settings/ngosen_settings/options.py
+msgid "OFF, Sen, Preedit"
+msgstr "Tắt, Gõ Sen, Gạch chân"
+
+#: settings/ngosen_settings/options.py
+msgid "None"
+msgstr "Rỗng"
+
+#: settings/ngosen_settings/options.py
+msgid "Tone marks"
+msgstr "Cách bỏ dấu"
+
+#: settings/ngosen_settings/options.py
+msgid "Quick typing"
+msgstr "Gõ nhanh"
+
+#: settings/ngosen_settings/options.py
+msgid "Language"
+msgstr "Ngôn ngữ"
+
+#: settings/ngosen_settings/options.py
+msgid "Text goes straight into the app as you type."
+msgstr "Chữ đi thẳng vào app ngay khi gõ."
+
+#: settings/ngosen_settings/options.py
+msgid "The word is underlined until it is done. Use it in an app that Sen does not work with."
+msgstr "Chữ đang gõ có gạch dưới cho tới khi gõ xong. Dùng khi app không tương thích với Gõ Sen."
+
+#: settings/ngosen_settings/options.py
+msgid "One letter or digit."
+msgstr "Một chữ cái hoặc chữ số."
+
+#: settings/ngosen_settings/options.py
+msgid "Another mode already uses this key."
+msgstr "Chế độ khác đã dùng phím này."
+
+#: settings/ngosen_settings/pages.py
+msgid "Cancel"
+msgstr "Huỷ"
+
+#: settings/ngosen_settings/pages.py
+msgid "Save"
+msgstr "Lưu"
+
+#: settings/ngosen_settings/pages.py
+msgid "Typing"
+msgstr "Gõ chữ"
+
+#: settings/ngosen_settings/pages.py
+msgid "No words found."
+msgstr "Không tìm thấy từ nào."
+
+#: settings/ngosen_settings/pages.py
+msgid "Press the new keys"
+msgstr "Bấm phím mới"
+
+#: settings/ngosen_settings/pages.py
+msgid "Hold the keys together, then let go."
+msgstr "Giữ các phím cùng lúc rồi thả ra."
+
+#: settings/ngosen_settings/pages.py
+msgid "Abbreviation (e.g. kg)"
+msgstr "Từ viết tắt (ví dụ: kg)"
+
+#: settings/ngosen_settings/pages.py
+msgid "Full text (e.g. khô gà)"
+msgstr "Từ đầy đủ (ví dụ: khô gà)"
+
+#: settings/ngosen_settings/pages.py
+msgid "Add"
+msgstr "Thêm"
+
+#: settings/ngosen_settings/pages.py
+msgid "Search macros..."
+msgstr "Tìm từ gõ tắt..."
+
+#: settings/ngosen_settings/pages.py
+msgid "Macro keys cannot contain spaces or special characters."
+msgstr "Cảnh báo: từ gõ tắt không được chứa phím cách hoặc ký tự đặc biệt."
+
+#: settings/ngosen_settings/pages.py
+msgid "Update"
+msgstr "Cập nhật"
+
+#: settings/ngosen_settings/pages.py
+msgid "Remove"
+msgstr "Xoá"
+
+#: settings/ngosen_settings/pages.py
+msgid "Dictionary"
+msgstr "Từ điển"
+
+#: settings/ngosen_settings/pages.py
+msgid "Word (e.g. ngoãy)"
+msgstr "Từ (ví dụ: ngoãy)"
+
+#: settings/ngosen_settings/pages.py
+msgid "Search words..."
+msgstr "Tìm từ..."
+
+#: settings/ngosen_settings/pages.py
+msgid "One word, without spaces."
+msgstr "Mỗi lần một từ, không có dấu cách."
+
+#: settings/ngosen_settings/pages.py
+msgid "No words yet."
+msgstr "Chưa có từ nào."
+
+#: settings/ngosen_settings/pages.py
+msgid "Keymap"
+msgstr "Keymap"
+
+#: settings/ngosen_settings/pages.py
+msgid "Apply Preset"
+msgstr "Áp dụng cài đặt sẵn"
+
+#: settings/ngosen_settings/pages.py
+msgid "Key (Example: s)"
+msgstr "Phím (Ví dụ: s)"
+
+#: settings/ngosen_settings/pages.py
+msgid "Action"
+msgstr "Hành động"
+
+#: settings/ngosen_settings/pages.py
+msgid "Search keys..."
+msgstr "Tìm phím..."
+
+#: settings/ngosen_settings/pages.py
+msgid "A key is one character, not a space."
+msgstr "Phím là một ký tự, không phải dấu cách."
+
+#: settings/ngosen_settings/pages.py
+msgid "Other keys…"
+msgstr "Phím khác…"
+
+#: settings/ngosen_settings/pages.py
+msgid "Try it"
+msgstr "Gõ thử"
+
+#: settings/ngosen_settings/pages.py
+msgid "No macros yet."
+msgstr "Chưa có gõ tắt nào."
+
+#: settings/ngosen_settings/pages.py
+msgid "No keys yet."
+msgstr "Chưa có phím nào."
+
+#: settings/ngosen_settings/pages.py
+#, python-brace-format
+msgid "Tip: {}"
+msgstr "Mẹo: {}"
+
+#: settings/ngosen_settings/pages.py
+#, python-brace-format
+msgid "{} words. Search to see them."
+msgstr "{} từ. Gõ vào ô tìm để xem."
+
+#: settings/ngosen_settings/pages.py
+#, python-brace-format
+msgid "Showing {} of {} words found."
+msgstr "Đang hiện {} trên {} từ tìm thấy."
+
+#: settings/ngosen_settings/pages.py
+msgid "Original Input Method:"
+msgstr "Kiểu gõ gốc:"
+
+#: settings/ngosen_settings/pages.py
+#, python-brace-format
+msgid "{key} already does “{action}”; Update replaces it."
+msgstr "{key} đang dùng cho “{action}”; bấm Cập nhật để thay."
+
+#: settings/ngosen_settings/pages.py
+#, python-brace-format
+msgid "Based on the code of {fork} and {vmk}."
+msgstr "Dựa trên mã của {fork} và {vmk}."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Search settings"
+msgstr "Tìm cài đặt"
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Type in the field above the page list to find a setting; Ctrl+F gets there."
+msgstr "Gõ vào ô phía trên danh sách trang để tìm một cài đặt; Ctrl+F đưa tới ô đó."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Tap Ctrl alone to keep the word as typed: tunx, Ctrl, Space keeps tũn."
+msgstr "Nhấp thả Ctrl để chốt chữ như đã gõ: tunx, Ctrl, Space giữ tũn."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "A macro ko → không also types Không when you type Ko."
+msgstr "Gõ tắt ko → không thì gõ Ko ra Không."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "] types ư and [ types ơ, so ch]a gives chưa. Off by default."
+msgstr "] ra ư, [ ra ơ, nên ch]a ra chưa. Mặc định tắt."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Space twice types a period. Off by default."
+msgstr "Bấm Space hai lần ra dấu chấm. Mặc định tắt."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "-- types an em dash (—). Off by default."
+msgstr "-- ra gạch dài (—). Mặc định tắt."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "hoà or hòa? Pick with “Use oà, uý (Instead Of òa, úy)”."
+msgstr "hoà hay hòa? Chọn ở ô “Bỏ dấu kiểu mới (oà, uý)”."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "$DATE and $TIME in a macro type today's date and time: hn → Hôm nay $DATE."
+msgstr "$DATE và $TIME trong gõ tắt ra ngày giờ hôm nay: hn → Hôm nay $DATE."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "“Back Up…” and “Restore…” in the window menu keep your settings, macros and dictionary."
+msgstr "“Sao lưu…” và “Khôi phục…” trong menu của cửa sổ giữ cài đặt, gõ tắt và từ điển."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Open setting"
+msgstr "Mở cài đặt"
+
+#: settings/ngosen_settings/whats_new.py
+msgid "What's new & tips"
+msgstr "Có gì mới & mẹo"
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Tips"
+msgstr "Mẹo hay"
+
+#: settings/ngosen_settings/whats_new.py
+#, python-brace-format
+msgid "Open the {} page"
+msgstr "Mở trang {}"
+
+#: settings/ngosen_settings/whats_new.py
+#, python-brace-format
+msgid "New in {}"
+msgstr "Version {} có gì mới"
+
+#: settings/ngosen_settings/window.py
+msgid "Back Up Settings"
+msgstr "Sao lưu cài đặt"
+
+#: settings/ngosen_settings/window.py
+msgid "Restore Settings"
+msgstr "Khôi phục cài đặt"
+
+#: settings/ngosen_settings/window.py
+msgid "Restore"
+msgstr "Khôi phục"
+
+#: settings/ngosen_settings/window.py
+msgid "Cannot read the settings"
+msgstr "Không đọc được cài đặt"
+
+#: settings/ngosen_settings/window.py
+msgid "_Undo"
+msgstr "_Hoàn tác"
+
+#: settings/ngosen_settings/window.py
+msgid "Back _Up…"
+msgstr "Sao _lưu…"
+
+#: settings/ngosen_settings/window.py
+msgid "_Restore…"
+msgstr "_Khôi phục…"
+
+#: settings/ngosen_settings/window.py
+msgid "_About Ngó Sen"
+msgstr "_Giới thiệu Ngó Sen"
+
+#: settings/ngosen_settings/window.py
+msgid "Menu"
+msgstr "Menu"
+
+#: settings/ngosen_settings/window.py
+msgid "Ngó Sen backup"
+msgstr "Bản sao lưu Ngó Sen"
+
+#: settings/ngosen_settings/window.py
+msgid "The settings changed after the restore, so nothing was undone."
+msgstr "Cài đặt đã đổi sau khi khôi phục, nên không hoàn tác gì."
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Cannot restore: {}. Nothing was changed."
+msgstr "Không khôi phục được: {}. Chưa có gì thay đổi."
+
+#: settings/ngosen_settings/window.py
+msgid "No settings found"
+msgstr "Không thấy cài đặt nào"
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Saved “{}”."
+msgstr "Đã lưu “{}”."
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Restore {}?"
+msgstr "Khôi phục {}?"
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Restored from {}."
+msgstr "Đã khôi phục từ {}."
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Cannot open the file dialog: {}"
+msgstr "Không mở được hộp chọn tệp: {}"
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Backed up to {}."
+msgstr "Đã sao lưu vào {}."
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Cannot save: {}"
+msgstr "Không lưu được: {}"
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Cannot back up: {}"
+msgstr "Không sao lưu được: {}"
+
+#: settings/ngosen_settings/window.py
+#, python-brace-format
+msgid "Cannot read the settings: {}"
+msgstr "Không đọc được cài đặt: {}"
+
+#: ngosen/src/core/ngosen-state-retone.cpp
+msgid "Tab or Esc: put back the key"
+msgstr "Cứu dấu: Tab hoặc Esc để trả lại phím vừa gõ"
+
+#: ngosen/src/core/ngosen-state-retype.cpp
+msgid "Tab or Esc: put back what was typed"
+msgstr "Cứu chữ: Tab hoặc Esc để trả lại chữ đã gõ"
+
+#: ngosen/src/core/ngosen-state-retype.cpp
+msgid "Enter: retype in Vietnamese, Tab or Esc: keep"
+msgstr "Cứu chữ: Enter để đổi, Tab hoặc Esc để giữ nguyên"
+
+#: settings/ngosen_settings/options.py
+msgid "Tap the keys together and let go; the tray icon and a short notification show the language."
+msgstr "Nhấn cùng lúc rồi thả ra; biểu tượng ở khay và một thông báo ngắn cho biết đang gõ tiếng gì."
+
+#: settings/ngosen_settings/options.py
+msgid "The tray menu changes at once, this window the next time it opens."
+msgstr "Menu khay đổi ngay, cửa sổ này đổi ở lần mở sau."
+
+#: settings/ngosen_settings/options.py
+msgid "A mode picked in the tray menu is kept for the app in use. Pick the app's usual mode again to make it follow the global setting."
+msgstr "Chế độ chọn ở menu khay được nhớ cho app đang dùng. Chọn lại chế độ app vẫn dùng để app đó lại theo cài đặt chung."
+
+#: settings/ngosen_settings/options.py
+msgid "xin → Xin in an empty field or on a new line. Not in address bars or some apps."
+msgstr "xin → Xin ở ô trống hoặc đầu dòng mới. Không áp dụng ở thanh địa chỉ và vài app."
+
+#: settings/ngosen_settings/options.py
+msgid "Modes in the tray menu"
+msgstr "Chế độ gõ trong menu khay"
+
+#: settings/ngosen_settings/options.py
+msgid "Show in the tray menu"
+msgstr "Hiện trong menu khay"
+
+#: settings/ngosen_settings/pages.py
+msgid "Vietnamese input method for Wayland compositors"
+msgstr "Bộ gõ tiếng Việt cho compositor Wayland"
+
+#: settings/ngosen_settings/whats_new.py
+msgid "The tray menu"
+msgstr "Menu khay"
+
+#: settings/ngosen_settings/whats_new.py
+msgid "Click the Ngó Sen icon to switch between English and Vietnamese; its menu picks the mode for the app in use."
+msgstr "Bấm biểu tượng Ngó Sen để đổi Anh/Việt; menu của nó chọn chế độ gõ cho app đang dùng."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "A capital letter after . ! ? and Enter. Off by default; the tray menu's Auto Capitalize pauses it."
+msgstr "Tự viết hoa sau . ! ? và Enter. Mặc định tắt; mục Tự viết hoa trong menu khay tắt tạm."
+
+#: settings/ngosen_settings/whats_new.py
+msgid "“Save typing log” in the tray menu records what you type, to attach to a bug report."
+msgstr "“Lưu nhật ký gõ” trong menu khay ghi lại chữ gõ, để gửi kèm báo lỗi."

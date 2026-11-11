@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <glib/gi18n-lib.h>
+#include <utility>
 
 namespace {
 
@@ -66,6 +67,9 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "wl-ngosen: unknown option %s\n", argv[1]);
         return 2;
     }
+    std::optional<std::string> desktopLanguage;
+    if (const char* language = std::getenv("LANGUAGE"))
+        desktopLanguage = language;
     // Menu labels are Vietnamese whatever the desktop language is, as in the IBus edition; the
     // English setting shows the strings as written.
     g_setenv("LANGUAGE", "vi", TRUE);
@@ -74,5 +78,5 @@ int main(int argc, char** argv) {
     const char* localeDir = std::getenv("NGOSEN_WL_LOCALEDIR");
     bindtextdomain(GETTEXT_PACKAGE, localeDir != nullptr ? localeDir : NGOSEN_LOCALEDIR);
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
-    return ngosen::runDaemon();
+    return ngosen::runDaemon(std::move(desktopLanguage));
 }

@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+import sys
+
+sys.path.insert(0, "@NGOSEN_SETTINGS_DIR@")
+
+from ngosen_settings.window import main  # noqa: E402
+
+sys.exit(main("@NGOSEN_DAEMON_EXEC@", "@NGOSEN_LOCALEDIR@", "@PROJECT_VERSION@"))

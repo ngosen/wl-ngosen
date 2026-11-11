@@ -33,6 +33,23 @@ namespace ngosen {
 
     namespace {
 
+        // The window gets the session's LANGUAGE back, so GTK's own labels follow the desktop and not
+        // the Vietnamese the daemon set for its menu.
+        void openSettingsWindow(const std::optional<std::string>& desktopLanguage) {
+            // Tests point this at a stand-in, so no window opens on the desktop running them.
+            const char* program = g_getenv("NGOSEN_WL_SETTINGS");
+            gchar*      argv[]  = {const_cast<gchar*>(program != nullptr ? program : NGOSEN_SETTINGS_EXEC), nullptr}; //NOLINT
+            gchar**     envp    = g_get_environ();
+            envp                = desktopLanguage ? g_environ_setenv(envp, "LANGUAGE", desktopLanguage->c_str(), TRUE) : g_environ_unsetenv(envp, "LANGUAGE");
+            GError*    error    = nullptr;
+            const bool started  = g_spawn_async(nullptr, argv, envp, G_SPAWN_DEFAULT, nullptr, nullptr, nullptr, &error);
+            g_strfreev(envp);
+            if (!started) {
+                NGOSEN_WARN(std::string("Cannot open the settings window: ") + error->message);
+                g_error_free(error);
+            }
+        }
+
         struct Daemon {
             InputMethod      im;
             IBusResources    resources{SettingsPaths::fromEnvironment()};
@@ -43,9 +60,10 @@ namespace ngosen {
             ToggleKey                    toggle;
             unsigned                     chordsGeneration = ~0U;
             // What the toggle key last chose; shared with the IBus edition through its marker file.
-            bool        englishOn = readEnglishOn(resources.paths());
-            AppModes    appModes{resources.paths().appModesFile()};
-            AppSwitches appSwitches{resources.paths().appSwitchesFile()};
+            bool                       englishOn = readEnglishOn(resources.paths());
+            AppModes                   appModes{resources.paths().appModesFile()};
+            AppSwitches                appSwitches{resources.paths().appSwitchesFile()};
+            std::optional<std::string> desktopLanguage;
             // The app the mode was picked for.
             std::string modeApp;
             GMainLoop*  loop   = nullptr;
@@ -101,6 +119,10 @@ namespace ngosen {
                 }
                 if (action == SaveTypingLogAction) {
                     saveTypingLog(resources.recorder());
+                    return;
+                }
+                if (action == SettingsAction) {
+                    openSettingsWindow(desktopLanguage);
                     return;
                 }
                 if (const auto mode = modeOfAction(action)) {
@@ -460,8 +482,9 @@ namespace ngosen {
 
     } // namespace
 
-    int runDaemon() {
+    int runDaemon(std::optional<std::string> desktopLanguage) {
         Daemon daemon;
+        daemon.desktopLanguage = std::move(desktopLanguage);
         switch (daemon.im.connect()) {
             case InputMethod::Connection::NotOffered: return 0;
             case InputMethod::Connection::Failed: return 1;

@@ -14,3 +14,5 @@ foreach(LANG ${NGOSEN_LANGUAGES})
     install(FILES ${MO} DESTINATION "${CMAKE_INSTALL_LOCALEDIR}/${LANG}/LC_MESSAGES")
 endforeach()
 add_custom_target(translations ALL DEPENDS ${NGOSEN_CATALOGS})
+
+add_test(NAME translations COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/misc/check-translations.py)

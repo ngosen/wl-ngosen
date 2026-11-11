@@ -20,9 +20,30 @@ src/ngosen-ibus-keys.cpp                 src/ngosen-keys.cpp (IBus key parsing r
 test/ibus-config.cpp                     test/config.cpp (mode menu, release notice, Sen switch and GNOME sources tests left out)
 test/ibus-app-modes.cpp                  test/app-modes.cpp
 test/ibus-program-name.cpp               test/program-name.cpp
+settings/ngosen_settings/backup.py       settings/ngosen_settings/backup.py
+settings/ngosen_settings/brand.py        settings/ngosen_settings/brand.py
+settings/ngosen_settings/i18n.py         settings/ngosen_settings/i18n.py
+settings/ngosen_settings/ini.py          settings/ngosen_settings/ini.py
+settings/ngosen_settings/keymap.py       settings/ngosen_settings/keymap.py
+settings/ngosen_settings/keys.py         settings/ngosen_settings/keys.py
+settings/ngosen_settings/options.py      settings/ngosen_settings/options.py
+settings/ngosen_settings/pages.py        settings/ngosen_settings/pages.py
+settings/ngosen_settings/search.py       settings/ngosen_settings/search.py
+settings/ngosen_settings/store.py        settings/ngosen_settings/store.py
+settings/ngosen_settings/whats_new.py    settings/ngosen_settings/whats_new.py
+settings/ngosen_settings/window.py       settings/ngosen_settings/window.py
+settings/tests/test_backup.py            settings/tests/test_backup.py
+settings/tests/test_i18n.py              settings/tests/test_i18n.py
+settings/tests/test_keys.py              settings/tests/test_keys.py
+settings/tests/test_store.py             settings/tests/test_store.py
+settings/tests/test_window.py            settings/tests/test_window.py
+misc/check-translations.py               misc/check-translations.py
 
 # Changed here:
 # - ngosen-ibus-config.cpp: a new ngosen.conf gets no AnnouncedVersion, and addLaterSettings and
 #   switchSenOnOnce are gone; the IBus edition runs both on its own start.
 # - ngosen-ibus-resources.cpp: no GNOME input sources.
 # - ngosen-ibus-typing-log.cpp: names this edition in the log header.
+# - settings/: no machine-check page, fcitx5 leftovers check, fcitx5 group or GNOME shortcut
+#   checks; the settings this edition lacks are not shown; its own name, app id, gettext domain,
+#   links, backup edition and what's new.

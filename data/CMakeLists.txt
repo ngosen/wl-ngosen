@@ -4,3 +4,5 @@ install(FILES "${NGOSEN_CORE_ICONS}/fcitx-ngosen.svg"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/status" RENAME wl-ngosen.svg)
 install(FILES "${NGOSEN_CORE_ICONS}/fcitx-ngosen-off.svg"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/status" RENAME wl-ngosen-off.svg)
+install(FILES "${NGOSEN_CORE_ICONS}/io.github.ngosen.NgoSen.Settings.svg"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps" RENAME io.github.ngosen.WlNgoSen.svg)
