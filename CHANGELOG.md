@@ -32,7 +32,7 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 - Gói cài cho Debian 13, Ubuntu 24.04 trở lên, Fedora 43 trở lên, openSUSE Tumbleweed và Arch Linux; cài được cùng
   máy với bản fcitx5 và bản IBus (#12).
 - Version mới có trên repo APT, pacman, zypper chung và COPR Fedora `nguyenphi/ngosen`, cập nhật qua trình quản lý
-  gói; README có lệnh thêm repo và cách tự chạy wl-ngosen khi đăng nhập trên niri, Sway, Hyprland (#PR).
+  gói; README có lệnh thêm repo và cách tự chạy wl-ngosen khi đăng nhập trên niri, Sway, Hyprland (#13).
 
 ### Sửa
 
