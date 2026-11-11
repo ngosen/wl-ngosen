@@ -135,10 +135,12 @@ jobs:
             mkdir -p /work/output
             find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} /work/output/ \;'
 
+      # Under Xvfb GTK renders through libGLESv2, which a desktop session brings and a bare container
+      # lacks; Fedora's gtk4 does not pull it in.
       - name: Install and run on a clean system
         run: |
           docker run --rm -v "$PWD:/work" -w /work "${{ matrix.distro }}" bash -euc '
-            dnf install -y $(ls output/wl-ngosen-[0-9]*.rpm) xorg-x11-server-Xvfb xauth /usr/bin/xwininfo
+            dnf install -y $(ls output/wl-ngosen-[0-9]*.rpm) xorg-x11-server-Xvfb xauth /usr/bin/xwininfo libglvnd-gles
             packaging/check-installed.sh'
 
       - name: Upload RPM artifact
