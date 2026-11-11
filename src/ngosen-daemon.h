@@ -5,10 +5,14 @@
  */
 #pragma once
 
+#include <optional>
+#include <string>
+
 namespace ngosen {
 
     // Connects to the compositor and types until it says the input method is unavailable or a signal
     // arrives. Returns the exit status: 0 on a signal or a compositor without input methods.
-    int runDaemon();
+    // desktopLanguage is LANGUAGE as the session set it, before the daemon changed it for its menu.
+    int runDaemon(std::optional<std::string> desktopLanguage);
 
 } // namespace ngosen

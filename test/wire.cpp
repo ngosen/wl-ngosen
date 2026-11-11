@@ -795,9 +795,10 @@ namespace {
         return readConfig(name, file).find(text) != std::string::npos;
     }
 
-    void testTrayIcon(TestBus& bus, const std::vector<std::string>& env) {
+    void testTrayIcon(TestBus& bus, std::vector<std::string> env) {
         TestCompositor    compositor({});
         const std::size_t before = bus.registered().size();
+        env.push_back("LANGUAGE=en_GB:en");
         check(begin(compositor, "tray", TrayEnglish, Language::Vietnamese, env) && focus(compositor), "setup for the tray", &compositor);
         check(compositor.waitFor([&] {
             bus.pump();
@@ -830,6 +831,9 @@ namespace {
         check(bus.iconName(item) == "wl-ngosen", "the icon follows the toggle key", &compositor);
         bus.click(item, bus.menuId(item, "Settings"));
         check(compositor.waitFor([&] { return fs::exists(root / "settings-window.ran"); }), "Settings in the menu starts the settings window", &compositor);
+        std::string language;
+        std::getline(std::ifstream(root / "settings-window.ran"), language);
+        check(language == "en_GB:en", "the settings window gets the desktop's language, not the menu's", &compositor);
         compositor.stop();
     }
 
@@ -920,10 +924,10 @@ namespace {
         compositor.stop();
     }
 
-    // Stands in for wl-ngosen-settings and leaves a mark when it runs.
+    // Stands in for wl-ngosen-settings and writes down the language it was started with.
     std::string fakeSettingsWindow() {
         const fs::path script = root / "settings-window";
-        std::ofstream(script) << "#!/bin/sh\ntouch \"$0.ran\"\n";
+        std::ofstream(script) << "#!/bin/sh\nprintf '%s' \"${LANGUAGE-unset}\" > \"$0.tmp\" && mv \"$0.tmp\" \"$0.ran\"\n";
         fs::permissions(script, fs::perms::owner_all);
         return script.string();
     }
