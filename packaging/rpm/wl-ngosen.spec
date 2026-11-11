@@ -24,6 +24,8 @@ BuildRequires:  gettext
 # The settings window loads these through GObject introspection, which the automatic requires miss.
 Requires:       python3-gobject
 Requires:       gtk4
+# Fedora's gtk4 does not pull in libGLESv2, and the window aborts without it in a bare install.
+Requires:       libglvnd-gles
 Requires:       libadwaita >= 1.5
 Requires:       hicolor-icon-theme
 
