@@ -13,6 +13,8 @@ endif()
 
 # The submodule's own option() predates CMP0077, so only a cache entry reaches it.
 set(NGOSEN_CORE_ONLY ON CACHE BOOL "Build the typing logic without fcitx5" FORCE)
+# The wire and window tests need a session bus, a locale and a display, which package builds lack.
+option(NGOSEN_WL_SESSION_TESTS "Run the tests that need a desktop session" ON)
 enable_testing()
 add_subdirectory(ngosen)
 

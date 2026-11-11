@@ -1,0 +1,24 @@
+{
+  "deb": [
+    { "distro": "debian:13", "codename": "trixie" },
+    { "distro": "debian:testing", "codename": "forky" },
+    { "distro": "debian:unstable", "codename": "sid" },
+    { "distro": "ubuntu:24.04", "codename": "noble", "pr": true },
+    { "distro": "ubuntu:26.04", "codename": "resolute", "pr": true },
+    { "distro": "ubuntu:26.10", "codename": "stonking" },
+    { "distro": "debian:13", "codename": "trixie", "arch": "arm64" },
+    { "distro": "debian:testing", "codename": "forky", "arch": "arm64" },
+    { "distro": "ubuntu:24.04", "codename": "noble", "arch": "arm64" },
+    { "distro": "ubuntu:26.04", "codename": "resolute", "arch": "arm64" },
+    { "distro": "ubuntu:26.10", "codename": "stonking", "arch": "arm64" }
+  ],
+  "fedora": [
+    { "distro": "fedora:43", "releasever": "43" },
+    { "distro": "fedora:44", "releasever": "44", "pr": true },
+    { "distro": "fedora:45", "releasever": "45" },
+    { "distro": "fedora:rawhide", "releasever": "rawhide" },
+    { "distro": "fedora:43", "releasever": "43", "arch": "arm64" },
+    { "distro": "fedora:44", "releasever": "44", "arch": "arm64" },
+    { "distro": "fedora:45", "releasever": "45", "arch": "arm64" }
+  ]
+}
