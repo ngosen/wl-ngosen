@@ -14,7 +14,14 @@ Bộ gõ tiếng Việt Ngó Sen chạy thẳng trên giao thức Wayland input-
 - Không có emoji, Cứu chữ, Cứu dấu và menu phím ` của bản fcitx5. Chọn chế độ gõ ở menu khay.
 - swaybar không hiện menu khay của app nào: bấm biểu tượng chỉ đổi Anh/Việt. Muốn có menu thì dùng Waybar.
 
+## Cài đặt
+
+Mở cửa sổ cài đặt từ mục **Cài đặt** trong menu khay, hoặc chạy `wl-ngosen-settings`. Cài đặt, gõ tắt và
+từ điển dùng chung với bản IBus; sao lưu ở bản này khôi phục được ở bản IBus và bản fcitx5, và ngược lại.
+
 ## Dựng từ mã nguồn
+
+Cửa sổ cài đặt cần Python 3 với PyGObject, GTK 4 và libadwaita.
 
 ```bash
 git clone --recurse-submodules https://github.com/ngosen/wl-ngosen.git

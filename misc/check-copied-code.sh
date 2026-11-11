@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 commit=$(awk '$1 == "commit" { print $2 }' COPIED_FROM)
-files=$(awk '/^(src|test)\// { print $1 }' COPIED_FROM)
+files=$(awk '/^(src|test|settings|misc)\// { print $1 }' COPIED_FROM)
 repo=${1:-}
 if [ -z "$repo" ]; then
     repo=$(mktemp -d)

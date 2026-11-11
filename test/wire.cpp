@@ -828,6 +828,8 @@ namespace {
         }),
               "the toggle key shows the new language in a notification", &compositor);
         check(bus.iconName(item) == "wl-ngosen", "the icon follows the toggle key", &compositor);
+        bus.click(item, bus.menuId(item, "Settings"));
+        check(compositor.waitFor([&] { return fs::exists(root / "settings-window.ran"); }), "Settings in the menu starts the settings window", &compositor);
         compositor.stop();
     }
 
@@ -918,13 +920,21 @@ namespace {
         compositor.stop();
     }
 
+    // Stands in for wl-ngosen-settings and leaves a mark when it runs.
+    std::string fakeSettingsWindow() {
+        const fs::path script = root / "settings-window";
+        std::ofstream(script) << "#!/bin/sh\ntouch \"$0.ran\"\n";
+        fs::permissions(script, fs::perms::owner_all);
+        return script.string();
+    }
+
     void testTray() {
         TestBus bus;
         check(bus.up(), "a private session bus for the tray");
         if (!bus.up())
             return;
         bus.startWatcher();
-        const std::vector<std::string> env = {"DBUS_SESSION_BUS_ADDRESS=" + bus.address()};
+        const std::vector<std::string> env = {"DBUS_SESSION_BUS_ADDRESS=" + bus.address(), "NGOSEN_WL_SETTINGS=" + fakeSettingsWindow()};
         testTrayIcon(bus, env);
         testTrayModes(bus, env);
         testTrayVietnamese(bus, env);

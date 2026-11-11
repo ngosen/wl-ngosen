@@ -231,13 +231,13 @@ class StoreTest(unittest.TestCase):
         self.assertEqual(read_text(own), "việt\nnam\nngoãy\n")
 
 
-@unittest.skipUnless(os.environ.get("NGOSEN_IBUS_ENGINE"), "needs the built engine")
+@unittest.skipUnless(os.environ.get("NGOSEN_WL_DAEMON"), "needs the built engine")
 class EngineTest(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.mkdtemp()
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, "config")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.home, "data")
-        self.engine = Engine(os.environ["NGOSEN_IBUS_ENGINE"])
+        self.engine = Engine(os.environ["NGOSEN_WL_DAEMON"])
 
     def test_window_shows_every_setting_the_engine_reads(self):
         self.assertEqual(set(self.engine.settings()), set(options.LABELS))

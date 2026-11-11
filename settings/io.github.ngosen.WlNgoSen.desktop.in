@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Ngó Sen
+Comment=Settings of the Ngó Sen Vietnamese input method
+Comment[vi]=Cài đặt bộ gõ tiếng Việt Ngó Sen
+Keywords=Vietnamese;input;keyboard;Telex;VNI;
+Keywords[vi]=tiếng Việt;bộ gõ;bàn phím;Telex;VNI;
+Exec=@NGOSEN_SETTINGS_EXEC@
+Icon=io.github.ngosen.WlNgoSen
+StartupWMClass=io.github.ngosen.WlNgoSen
+Terminal=false
+Categories=Settings;DesktopSettings;

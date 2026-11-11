@@ -33,6 +33,17 @@ namespace ngosen {
 
     namespace {
 
+        void openSettingsWindow() {
+            // Tests point this at a stand-in, so no window opens on the desktop running them.
+            const char* program = g_getenv("NGOSEN_WL_SETTINGS");
+            gchar*      argv[]  = {const_cast<gchar*>(program != nullptr ? program : NGOSEN_SETTINGS_EXEC), nullptr}; //NOLINT
+            GError*     error   = nullptr;
+            if (!g_spawn_async(nullptr, argv, nullptr, G_SPAWN_DEFAULT, nullptr, nullptr, nullptr, &error)) {
+                NGOSEN_WARN(std::string("Cannot open the settings window: ") + error->message);
+                g_error_free(error);
+            }
+        }
+
         struct Daemon {
             InputMethod      im;
             IBusResources    resources{SettingsPaths::fromEnvironment()};
@@ -101,6 +112,10 @@ namespace ngosen {
                 }
                 if (action == SaveTypingLogAction) {
                     saveTypingLog(resources.recorder());
+                    return;
+                }
+                if (action == SettingsAction) {
+                    openSettingsWindow();
                     return;
                 }
                 if (const auto mode = modeOfAction(action)) {

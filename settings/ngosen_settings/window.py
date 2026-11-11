@@ -17,19 +17,16 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402,F401
 from . import (  # noqa: E402
     backup,
     brand,
-    check_page,
     i18n,
-    ini,
-    keys,
     options,
     pages,
     search,
     whats_new,
 )
 from .i18n import _  # noqa: E402
-from .store import Engine, Store, read_text  # noqa: E402
+from .store import Engine, Store  # noqa: E402
 
-APP_ID = "io.github.ngosen.IBusNgoSen"
+APP_ID = "io.github.ngosen.WlNgoSen"
 # A file dialog the user closed; older GTK has no CANCELLED.
 CLOSED_DIALOG = [
     getattr(Gtk.DialogError, name)
@@ -39,38 +36,20 @@ CLOSED_DIALOG = [
 
 
 class Window(Adw.ApplicationWindow):
-    def __init__(self, app, store, names, version, sources=None, engine=None):
+    def __init__(self, app, store, names, version, engine=None):
         super().__init__(application=app, title="Ngó Sen", default_width=800, default_height=720)
         self.store = store
         self.engine = engine
         self.toast = None
-        self.check_tab = None
-        self.check_badge = None
-        sources = sources or check_page.GnomeSources()
-        self.rows = pages.SettingRows(
-            store, names, self.save, lambda: keys.gnome_chords(*sources.gnome_keys())
-        )
+        self.rows = pages.SettingRows(store, names, self.save)
         self.macros = pages.MacroPage(store, self.rows, self.save_macros)
         self.dictionary = pages.DictionaryPage(store, self.rows, self.save_words)
         self.keymap = pages.KeymapPage(store, self.rows, self.save_keymap)
-        self.check = check_page.CheckPage(
-            sources,
-            version,
-            self.notify,
-            self._count,
-            self._direct_typing,
-            backup.Paths(store).app_modes,
-            self._toggle_key,
-            store.folder,
-        )
 
         self.stack = stack = Adw.ViewStack()
         self.typing = typing = pages.typing_page(self.rows, whats_new.random_tip(), self.show_tips)
-        typing.add(pages.fcitx5_group(self._show, self.choose_backup_file))
         self.whats_new = whats_new.WhatsNewPage(
-            self.open_setting,
-            self.show_page,
-            {"macros": self.macros.page.get_title(), "check": self.check.page.get_title()},
+            self.open_setting, self.show_page, {"macros": self.macros.page.get_title()}
         )
         self.named_pages = {
             "typing": typing,
@@ -78,19 +57,14 @@ class Window(Adw.ApplicationWindow):
             "dictionary": self.dictionary.page,
             "keymap": self.keymap.page,
             "whats-new": self.whats_new.page,
-            "check": self.check.page,
         }
         for page in self.named_pages.values():
-            tab = stack.add_titled_with_icon(page, None, page.get_title(), page.get_icon_name())
-            if page is self.check.page:
-                self.check_tab = tab
-        # The check page lists findings, not settings.
+            stack.add_titled_with_icon(page, None, page.get_title(), page.get_icon_name())
         self.search_pages = [typing, self.macros.page, self.dictionary.page, self.keymap.page]
         # Header tabs cut the longer Vietnamese page names; a sidebar has room for them.
         self.split = Adw.NavigationSplitView(
             sidebar=self._sidebar_page(version), content=self._content_page()
         )
-        self._count(len(self.check.findings))
         stack.connect("notify::visible-child", self._page_shown)
         self._page_shown(stack, None)
         self.toasts = Adw.ToastOverlay(child=self.split)
@@ -202,10 +176,6 @@ class Window(Adw.ApplicationWindow):
         box = Gtk.Box(spacing=12, margin_top=6, margin_bottom=6, margin_start=6, margin_end=6)
         box.append(Gtk.Image(icon_name=tab.get_icon_name()))
         box.append(Gtk.Label(label=tab.get_title(), xalign=0, hexpand=True))
-        badge = Gtk.Label(css_classes=["numeric", "accent"], visible=False)
-        box.append(badge)
-        if tab is self.check_tab:
-            self.check_badge = badge
         return Gtk.ListBoxRow(child=box)
 
     def _content_page(self):
@@ -235,17 +205,6 @@ class Window(Adw.ApplicationWindow):
 
     def save(self, key, value):
         self._write(lambda: self.store.set(key, value), _(options.LABELS[key]))
-        if key == "DirectTyping":
-            self.check.run()
-
-    def _toggle_key(self):
-        # As the engine read it: keys it cannot parse are left out.
-        return bool(self.store.values.get("ToggleKey", "").strip())
-
-    def _direct_typing(self):
-        # The engine saves the mode itself when it is picked from its menu.
-        saved = ini.parse(read_text(self.store.settings_file) or "")[0]
-        return saved.get("DirectTyping", self.store.values.get("DirectTyping")) == "True"
 
     def save_macros(self, macros, _key):
         saved = self._write(lambda: self.store.set_macros(macros) or True, _("Macro"))
@@ -274,21 +233,6 @@ class Window(Adw.ApplicationWindow):
         toast.connect("button-clicked", lambda _t: self.undo())
         self._show(toast)
         return True
-
-    def _count(self, left):
-        if self.check_tab is not None:
-            self.check_tab.set_badge_number(left)
-            self.check_tab.set_needs_attention(left > 0)
-        if self.check_badge is not None:
-            self.check_badge.set_label(str(left))
-            self.check_badge.set_visible(left > 0)
-
-    def notify(self, text, undo):
-        toast = Adw.Toast(title=text)
-        if undo is not None:
-            toast.set_button_label(_("_Undo"))
-            toast.connect("button-clicked", lambda _t: undo())
-        self._show(toast)
 
     def _show(self, toast):
         if self.toast is not None:
@@ -471,7 +415,7 @@ def main(engine_path, localedir, version):
         window = app.get_active_window()
         if window is None:
             brand.install_css()
-            engine = Engine(os.environ.get("NGOSEN_IBUS_ENGINE", engine_path))
+            engine = Engine(os.environ.get("NGOSEN_WL_DAEMON", engine_path))
             store, names, error = load(engine)
             window = (
                 error_window(app, error)

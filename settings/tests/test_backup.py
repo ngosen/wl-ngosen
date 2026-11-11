@@ -9,7 +9,7 @@ import unittest
 from ngosen_settings import backup, ini, keys
 from ngosen_settings.store import Engine, Store, read_text, write_text
 
-from .test_window import CAN_RUN, FakeSources, Vietnamese, window
+from .test_window import CAN_RUN, Vietnamese, window
 
 DEFAULT_TOGGLE = "Control+Shift_L Control+Shift_R Shift+Control_L Shift+Control_R"
 DEFAULTS = {
@@ -455,7 +455,7 @@ class BackupTest(UserFiles, unittest.TestCase):
             ["config", "macros", "keymaps", "switches", "dictionary"],
         )
         # The fcitx5 edition keeps its own per-app switches when it restores this.
-        self.assertEqual(exported["meta"]["edition"], "ibus")
+        self.assertEqual(exported["meta"]["edition"], "wl")
         self.assertEqual(exported["config"]["Mode"], "Sen")
         self.assertEqual(exported["config"]["VietnameseOn"], "True")
         # A list edited after the backup goes back to the packaged one.
@@ -504,7 +504,7 @@ class WindowBackupTest(UserFiles, unittest.TestCase):
         window.i18n._translation = Vietnamese()
         super().setUp()
         names = {"InputMethod": ["Telex", "VNI"], "OutputCharset": ["Unicode"]}
-        self.window = window.Window(None, self.store, names, "1.0.0", FakeSources(), self.engine)
+        self.window = window.Window(None, self.store, names, "1.0.0", self.engine)
 
     def test_restore_then_undo(self):
         before = self.files()
@@ -543,13 +543,6 @@ class WindowBackupTest(UserFiles, unittest.TestCase):
         self.assertEqual(self.files(), changed)
         self.assertIn("nothing was undone", self.window.toast.get_title())
 
-    def test_gnome_shortcuts_are_not_restored_as_switch_keys(self):
-        path = self.save(fcitx5_backup(ToggleKey={"0": "Super+space", "1": "Alt+z"}))
-        dialog = self.window.restore_backup(path)
-        self.assertIn("Super+Space", dialog.get_body())
-        dialog.emit("response", "restore")
-        self.assertEqual(self.settings()["ToggleKey"], "Alt+z")
-
     def test_file_dialog_errors(self):
         def fail(code):
             def finish(_result):
@@ -577,13 +570,13 @@ class WindowBackupTest(UserFiles, unittest.TestCase):
         self.assertEqual(backup.load(target)["macros"], [{"Key": "dt", "Value": "điện thoại"}])
 
 
-@unittest.skipUnless(os.environ.get("NGOSEN_IBUS_ENGINE"), "needs the built engine")
+@unittest.skipUnless(os.environ.get("NGOSEN_WL_DAEMON"), "needs the built engine")
 class EngineBackupTest(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.mkdtemp()
         for name in ("CONFIG", "DATA", "STATE"):
             os.environ[f"XDG_{name}_HOME"] = os.path.join(self.home, name.lower())
-        self.engine = Engine(os.environ["NGOSEN_IBUS_ENGINE"])
+        self.engine = Engine(os.environ["NGOSEN_WL_DAEMON"])
         self.store = Store(self.engine)
         self.paths = backup.Paths(self.store)
 

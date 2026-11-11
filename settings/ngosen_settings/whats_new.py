@@ -16,79 +16,25 @@ from .i18n import N_, _
 # Newest release first. A release with no entry gets no section.
 FEATURES = [
     {
-        "version": "1.3",
-        "title": N_("English/Vietnamese per app"),
+        "version": "0.1",
+        "title": N_("The tray menu"),
         "how": N_(
-            "Ctrl+Shift and OFF in the ` menu now apply to the app in use only; an app you never "
-            "switched follows your last switch."
+            "Click the Ngó Sen icon to switch between English and Vietnamese; its menu picks the "
+            "mode for the app in use."
         ),
         "example": "",
-        "target": ("setting", "ToggleKey"),
+        "target": ("setting", "ModeOrder"),
     },
     {
-        "version": "1.3",
-        "title": N_("Your own mode menu"),
-        "how": N_(
-            "Reorder or hide the modes of the ` menu, and set a key that moves the app in use to "
-            "the next mode."
-        ),
-        "example": "",
-        "target": ("setting", "CycleModeKey"),
-    },
-    {
-        "version": "1.3",
+        "version": "0.1",
         "title": N_("Search settings"),
         "how": N_("Type in the field above the page list to find a setting; Ctrl+F gets there."),
         "example": "",
         "target": None,
     },
-    {
-        "version": "1.2",
-        "title": N_("Type with Sen"),
-        "how": N_(
-            "Text goes straight into the field instead of an underlined word. Press ` to pick the "
-            "underline for one app."
-        ),
-        "example": "",
-        "target": ("setting", "DirectTyping"),
-    },
-    {
-        "version": "1.2",
-        "title": N_("Cứu chữ"),
-        "how": N_(
-            "Forgot to switch Vietnamese on? Press the English/Vietnamese key and the word is "
-            "fixed; Tab or Esc gives back what you typed."
-        ),
-        "example": "vieetj → việt",
-        "target": ("setting", "RetypeAfterSwitch"),
-    },
-    {
-        "version": "1.2",
-        "title": N_("Cứu dấu"),
-        "how": N_(
-            "Click right after a word and type a tone key to change its tone mark; Tab or Esc "
-            "gives it back."
-        ),
-        "example": "chao + f → chào",
-        "target": ("setting", "RetoneSelection"),
-    },
-    {
-        "version": "1.2",
-        "title": N_("The Check page"),
-        "how": N_(
-            "Shows what keeps Vietnamese typing from working on this machine, with a button to fix "
-            "each item."
-        ),
-        "example": "",
-        "target": ("page", "check"),
-    },
 ]
 
 TIPS = [
-    {
-        "text": N_("Press ` to pick Sen, Preedit or OFF for the app in use."),
-        "target": ("setting", "ModeMenuKey"),
-    },
     {
         "text": N_("Tap Ctrl alone to keep the word as typed: tunx, Ctrl, Space keeps tũn."),
         "target": ("setting", "LockWordModifier"),
@@ -111,7 +57,7 @@ TIPS = [
     },
     {
         "text": N_(
-            "A capital letter after . ! ? and Enter. Off by default; the top bar menu's Auto "
+            "A capital letter after . ! ? and Enter. Off by default; the tray menu's Auto "
             "Capitalize pauses it."
         ),
         "target": ("setting", "AutoCapitalizeAfterPunctuation"),
@@ -125,13 +71,8 @@ TIPS = [
         "target": ("page", "macros"),
     },
     {
-        "text": N_("Typing wrong in some app? The Check page says why."),
-        "target": ("page", "check"),
-    },
-    {
         "text": N_(
-            "“Save typing log” in the top bar menu records what you type, to attach to a bug "
-            "report."
+            "“Save typing log” in the tray menu records what you type, to attach to a bug report."
         ),
         "target": None,
     },

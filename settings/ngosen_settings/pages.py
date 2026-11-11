@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The pages of the window. Each control saves as soon as it changes."""
 
-from gi.repository import Adw, Gdk, GLib, Gtk, Pango
+from gi.repository import Adw, Gdk, GLib, Gtk
 
 from . import keymap, keys, options
-from .i18n import N_, _
+from .i18n import _
 
 # The last toggle key choice, which asks for keys instead of saving.
 OTHER_KEYS = "\0other"
@@ -660,18 +660,7 @@ class KeymapPage:
         return row
 
 
-FCITX5_ONLY = [
-    N_("Sen in every app, with its fixes for each app"),
-    N_("Cứu dấu in every app"),
-    N_("Vim mode for each app"),
-    N_("The emoji picker, and turning Vietnamese off for one app"),
-]
-FULL_EDITION_URL = "https://github.com/ngosen/ngosen"
-# The window only hands the command over: the installer needs a terminal for sudo.
-FULL_EDITION_COMMAND = (
-    "curl -fsSL https://raw.githubusercontent.com/ngosen/ngosen/main/install.sh | bash"
-)
-PROJECT_URL = "https://github.com/ngosen/ibus-ngosen"
+PROJECT_URL = "https://github.com/ngosen/wl-ngosen"
 # The name and its link stay on one line: it is the only place this project may name it.
 FORK = ("fcitx5-lotus", "https://github.com/LotusInputMethod/fcitx5-lotus")
 VMK = ("VMK", "https://github.com/thanhpy2009/VMK")
@@ -680,9 +669,9 @@ VMK = ("VMK", "https://github.com/thanhpy2009/VMK")
 def about_dialog(version):
     dialog = Adw.AboutDialog(
         application_name="Ngó Sen",
-        application_icon="io.github.ngosen.IBusNgoSen",
+        application_icon="io.github.ngosen.WlNgoSen",
         version=version,
-        comments=_("Vietnamese input method for GNOME")
+        comments=_("Vietnamese input method for Wayland compositors")
         + "\n\n"
         + _("Based on the code of {fork} and {vmk}.").format(fork=FORK[0], vmk=VMK[0]),
         website=PROJECT_URL,
@@ -692,83 +681,3 @@ def about_dialog(version):
     for name, url in (FORK, VMK):
         dialog.add_link(name, url)
     return dialog
-
-
-def fcitx5_group(show_toast, back_up):
-    group = preferences_group(
-        N_("In the fcitx5 edition"),
-        _("Ngó Sen for fcitx5 also has these. It runs on fcitx5 instead of IBus."),
-    )
-    for text in FCITX5_ONLY:
-        group.add(Adw.ActionRow(title=_(text), use_markup=False))
-    switch = Adw.ActionRow(
-        title=_("Switch to the fcitx5 edition"),
-        subtitle=_("Shows the install command to copy."),
-        activatable=True,
-    )
-    switch.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-    switch.connect("activated", lambda r: show_switch_dialog(r.get_root(), show_toast, back_up))
-    group.add(switch)
-    group.add(
-        _link_row(
-            _("Ngó Sen full edition"), _("Runs on fcitx5 and has all of these."), FULL_EDITION_URL
-        )
-    )
-    return group
-
-
-def show_switch_dialog(parent, show_toast, back_up=None):
-    dialog = Adw.AlertDialog(
-        heading=_("Switch to the fcitx5 edition"),
-        body=_(
-            "Run this command in a terminal, then log out and back in. On Debian and Ubuntu it "
-            "replaces this edition. On Fedora, openSUSE and Arch, copy the command, remove "
-            "ibus-ngosen, then run it; this window goes with the package."
-        )
-        + "\n\n"
-        + _(
-            "Settings made here are not copied over. Back them up, then restore the file in the "
-            "fcitx5 edition."
-        ),
-    )
-    command = Gtk.Label(label=FULL_EDITION_COMMAND, selectable=True, wrap=True, xalign=0)
-    command.set_wrap_mode(Pango.WrapMode.CHAR)
-    # A hyphen at the break would read as part of the command.
-    attributes = Pango.AttrList()
-    attributes.insert(Pango.attr_insert_hyphens_new(False))
-    command.set_attributes(attributes)
-    command.add_css_class("monospace")
-    dialog.set_extra_child(command)
-    dialog.add_response("close", _("Close"))
-    if back_up is not None:
-        dialog.add_response("backup", _("Back Up First…"))
-    dialog.add_response("copy", _("Copy command"))
-    dialog.set_response_appearance("copy", Adw.ResponseAppearance.SUGGESTED)
-    dialog.set_default_response("copy")
-    dialog.set_close_response("close")
-    dialog.connect(
-        "response", lambda d, response: _switch_response(d, response, show_toast, back_up)
-    )
-    dialog.present(parent)
-    return dialog
-
-
-def _switch_response(dialog, response, show_toast, back_up):
-    if response == "backup":
-        back_up()
-        return
-    if response != "copy":
-        return
-    dialog.get_clipboard().set(FULL_EDITION_COMMAND)
-    show_toast(Adw.Toast(title=_("Command copied.")))
-
-
-def _link_row(title, subtitle, url):
-    row = Adw.ActionRow(title=title, activatable=True)
-    if subtitle:
-        row.set_subtitle(subtitle)
-    row.add_suffix(Gtk.Image(icon_name="adw-external-link-symbolic"))
-    row.connect(
-        "activated", lambda r: Gtk.UriLauncher(uri=url).launch(r.get_root(), None, None, None)
-    )
-    return row

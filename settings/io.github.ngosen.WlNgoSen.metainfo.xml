@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ngosen.WlNgoSen</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Ngó Sen for Wayland</name>
+  <name xml:lang="vi">Ngó Sen cho Wayland</name>
+  <summary>Type Vietnamese with Telex or VNI</summary>
+  <summary xml:lang="vi">Gõ tiếng Việt bằng Telex hoặc VNI</summary>
+  <description>
+    <p>
+      A Vietnamese input method for Wayland compositors with input-method-v2, such as niri, Sway
+      and Hyprland, without fcitx5 or IBus. It types straight into apps that report the text around
+      the cursor and underlines the word being typed elsewhere; the typing mode can be picked for
+      each app. A tap of Ctrl+Shift switches between English and Vietnamese.
+    </p>
+    <p xml:lang="vi">
+      Bộ gõ tiếng Việt cho compositor Wayland có input-method-v2 như niri, Sway và Hyprland, không
+      cần fcitx5 hay IBus. Chữ hiện thẳng vào app báo được chữ quanh con trỏ, app khác thì gạch chân
+      chữ đang gõ; mỗi app chọn được cách gõ riêng. Nhấp Ctrl+Shift để đổi Anh/Việt.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.ngosen.WlNgoSen.desktop</launchable>
+  <url type="homepage">https://github.com/ngosen/wl-ngosen</url>
+  <url type="bugtracker">https://github.com/ngosen/wl-ngosen/issues</url>
+  <developer id="io.github.ngosen">
+    <name>Ngó Sen contributors</name>
+  </developer>
+  <categories>
+    <category>Settings</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+</component>

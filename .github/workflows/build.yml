@@ -60,10 +60,10 @@ jobs:
         include:
           # A new enough Rust for the core comes only as versioned packages on Ubuntu 24.04.
           - image: ubuntu:24.04
-            packages: g++ cmake make git ca-certificates pkg-config libglib2.0-dev libxkbcommon-dev libwayland-dev wayland-protocols xkb-data dbus gettext locales cargo-1.91 rustc-1.91
+            packages: g++ cmake make git ca-certificates pkg-config libglib2.0-dev libxkbcommon-dev libwayland-dev wayland-protocols xkb-data dbus gettext locales python3 python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 xvfb xauth desktop-file-utils appstream cargo-1.91 rustc-1.91
             path: /usr/lib/rust-1.91/bin
           - image: fedora:44
-            packages: gcc-c++ cmake make git pkgconf-pkg-config glib2-devel libxkbcommon-devel wayland-devel wayland-protocols-devel xkeyboard-config dbus-daemon gettext glibc-langpack-en cargo rust
+            packages: gcc-c++ cmake make git pkgconf-pkg-config glib2-devel libxkbcommon-devel wayland-devel wayland-protocols-devel xkeyboard-config dbus-daemon gettext glibc-langpack-en python3 python3-gobject gtk4 libadwaita xorg-x11-server-Xvfb desktop-file-utils appstream cargo rust
     steps:
       - name: Install dependencies
         run: |
@@ -85,6 +85,9 @@ jobs:
           cmake --build build -j"$(nproc)"
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-tests=error -j"$(nproc)"
+        env:
+          # A missing GTK or libadwaita package fails the run instead of skipping the window tests.
+          NGOSEN_WINDOW_TESTS: required
 
   # A memory error in the daemon stops typing in every app until it is started again.
   sanitizers:
@@ -95,7 +98,7 @@ jobs:
       - name: Install dependencies
         run: >-
           dnf install -y gcc-c++ cmake ninja-build git pkgconf-pkg-config glib2-devel libxkbcommon-devel
-          wayland-devel wayland-protocols-devel xkeyboard-config dbus-daemon gettext glibc-langpack-en cargo rust libasan libubsan
+          wayland-devel wayland-protocols-devel xkeyboard-config dbus-daemon gettext glibc-langpack-en python3 python3-gobject gtk4 libadwaita xorg-x11-server-Xvfb cargo rust libasan libubsan
       - uses: actions/checkout@v7
         with:
           submodules: true
@@ -108,3 +111,6 @@ jobs:
           cmake --build build -j"$(nproc)"
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-tests=error -j"$(nproc)"
+        env:
+          # A missing GTK or libadwaita package fails the run instead of skipping the window tests.
+          NGOSEN_WINDOW_TESTS: required

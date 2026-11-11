@@ -25,7 +25,7 @@ class Vietnamese:
     def gettext(self, text):
         # A real catalog answers the empty string with its header.
         if not text:
-            return "Project-Id-Version: ibus-ngosen"
+            return "Project-Id-Version: wl-ngosen"
         return {"Everywhere": "Mọi nơi", "Non-Start": "Trong từ", "English": "Tiếng Anh"}.get(
             text, text
         )
@@ -77,29 +77,6 @@ def labels(widget):
         child = child.get_next_sibling()
 
 
-class FakeSources:
-    """GNOME input sources kept in memory, so no test changes the desktop it runs on."""
-
-    def __init__(self, sources=None):
-        self.sources = sources
-
-    def get(self):
-        return self.sources
-
-    def set(self, sources):
-        self.sources = list(sources)
-        return True
-
-    def gnome_keys(self):
-        return ["<Super>space", "<Shift><Super>space", "<Super>a"], [
-            "grp:ctrl_alt_toggle_bidir",
-            "grp:alt_caps_toggle",
-        ]
-
-    def switch_keys(self):
-        return ["<Super>space", "<Shift><Super>space"], ["grp:alt_caps_toggle"]
-
-
 class RequiredTest(unittest.TestCase):
     @unittest.skipUnless(REQUIRED, "not required here")
     def test_window_tests_run(self):
@@ -121,10 +98,24 @@ class WindowTest(unittest.TestCase):
             "InputMethod": ["Telex", "VNI", "Telex + VNI"],
             "OutputCharset": ["Unicode", "TCVN3 (ABC)"],
         }
-        self.window = window.Window(None, self.store, names, "1.0.0", FakeSources())
+        self.window = window.Window(None, self.store, names, "1.0.0")
 
     def settings(self):
         return ini.parse(read_text(self.store.settings_file))[0]
+
+    def test_settings_this_edition_lacks_are_not_shown(self):
+        rows = self.window.rows.rows
+        for key in (
+            "ModeMenuKey",
+            "CycleModeKey",
+            "ShortcutSen",
+            "ShowModeVim",
+            "RetoneSelection",
+            "RetypeAfterSwitch",
+        ):
+            self.assertNotIn(key, rows)
+        for key in ("ToggleKey", "ModeOrder", "ShowModeSen", "ShowMenuCharset"):
+            self.assertIn(key, rows)
 
     def test_switch_saves_and_undoes(self):
         self.window.rows.rows["SpellCheck"].set_active(False)
@@ -156,12 +147,6 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(self.settings()["W2U"], "Everywhere")
         self.assertEqual(self.settings()["InputMethod"], "Telex + VNI")
 
-    def test_mode_menu_key_choices(self):
-        row = self.window.rows.rows["ModeMenuKey"]
-        self.assertEqual(row.get_model().get_string(row.get_selected()), "`")
-        row.set_selected(1)
-        self.assertEqual(self.settings()["ModeMenuKey"], "Shift+asciitilde")
-
     def test_mode_order_saved_without_vim_is_its_preset(self):
         engine = FakeEngine(self.folder)
         saved = engine.settings()
@@ -173,7 +158,6 @@ class WindowTest(unittest.TestCase):
             store,
             {"InputMethod": ["Telex"], "OutputCharset": ["Unicode"]},
             "1.0.0",
-            FakeSources(),
         )
         model = win.rows.rows["ModeOrder"].get_model()
         self.assertEqual(model.get_n_items(), 3)
@@ -186,20 +170,6 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(
             [model.get_string(i) for i in range(model.get_n_items())], ["Tiếng Việt", "English"]
         )
-
-    def test_mode_menu_shortcut_must_be_free(self):
-        row = self.window.rows.rows["ShortcutOff"]
-        self.assertEqual(row.get_text(), "e")
-        row.set_text("q")
-        self.assertNotIn("ShortcutOff", self.settings())
-        self.assertTrue(row.has_css_class("error"))
-        row.set_text(";")
-        self.assertNotIn("ShortcutOff", self.settings())
-        row.set_text("x")
-        self.assertEqual(self.settings()["ShortcutOff"], "x")
-        self.assertFalse(row.has_css_class("error"))
-        row.set_text("Z")
-        self.assertEqual(self.settings()["ShortcutOff"], "z")
 
     def test_hand_written_value_is_kept(self):
         row = self.window.rows.rows["TimeFormat"]
@@ -304,25 +274,6 @@ class WindowTest(unittest.TestCase):
         self.window.undo()
         self.assertEqual(self.store.keymap, [])
 
-    def test_switch_dialog_copies_the_command(self):
-        dialog = window.pages.show_switch_dialog(self.window, self.window._show)
-        dialog.emit("response", "close")
-        self.assertIsNone(self.window.toast)
-        dialog = window.pages.show_switch_dialog(self.window, self.window._show)
-        dialog.emit("response", "copy")
-        self.assertEqual(self.window.toast.get_title(), "Command copied.")
-        self.assertNotIn("asks before", dialog.get_body())
-        self.assertFalse(dialog.has_response("backup"))
-
-    def test_switch_dialog_offers_a_backup_first(self):
-        asked = []
-        dialog = window.pages.show_switch_dialog(
-            self.window, self.window._show, lambda: asked.append(True)
-        )
-        self.assertTrue(dialog.has_response("backup"))
-        dialog.emit("response", "backup")
-        self.assertEqual(asked, [True])
-
     def test_dictionary_add_and_remove(self):
         page = self.window.dictionary
         page.word_row.set_text("ngo ãy")
@@ -384,8 +335,6 @@ class WindowTest(unittest.TestCase):
         for names in (
             ["Control_L"],
             ["Shift_L", "a"],
-            ["Super_L", "space"],
-            ["Alt_L", "Caps_Lock"],
         ):
             capture = self.capture(*names)
             self.assertFalse(capture.dialog.get_response_enabled("save"), names)
@@ -408,12 +357,6 @@ class WindowTest(unittest.TestCase):
         capture.release(1)
         capture.release(2)
         self.assertEqual(capture.shown.get_label(), "Ctrl+Shift")
-
-    def test_toggle_key_gnome_shortcuts_refused(self):
-        for names in (["Super_L", "a"], ["Control_L", "Alt_L"]):
-            capture = self.capture(*names)
-            self.assertFalse(capture.dialog.get_response_enabled("save"), names)
-            capture.dialog.emit("response", "cancel")
 
     def test_toggle_key_navigation_keys_pass(self):
         capture = self.capture()
@@ -440,7 +383,7 @@ class WindowTest(unittest.TestCase):
         # The engine gets the key as the modifiers held at its press make it.
         capture = self.capture("Control_L", "1", "Shift_L")
         self.assertFalse(capture.dialog.get_response_enabled("save"))
-        self.assertEqual(capture.note.get_label(), window.keys.MODIFIERS_FIRST)
+        self.assertEqual(capture.note.get_label(), window.pages.keys.MODIFIERS_FIRST)
 
     def test_toggle_key_forget_ends_navigation(self):
         capture = self.capture()
@@ -476,10 +419,6 @@ class WindowTest(unittest.TestCase):
         capture.release(5)
         self.assertEqual(capture.shown.get_label(), "Ctrl+Shift")
 
-    def test_custom_binding_without_schema(self):
-        # GSettings aborts the app on a missing schema or a bad path.
-        self.assertEqual(window.check_page.custom_binding("not/a/path"), "")
-
     def test_toggle_key_stray_release(self):
         capture = self.capture()
         capture.release(5)
@@ -494,7 +433,7 @@ class WindowTest(unittest.TestCase):
     def test_about_is_in_the_menu_not_a_tab(self):
         tabs = self.window.stack.get_pages()
         titles = [tabs.get_item(i).get_title() for i in range(tabs.get_n_items())]
-        self.assertEqual(titles[-1], "Check")
+        self.assertEqual(titles[-1], "What's new & tips")
         self.assertNotIn("About", titles)
         self.assertIsNotNone(self.window.lookup_action("about"))
         dialog = self.window.show_about("1.0.0")
@@ -511,19 +450,16 @@ class WindowTest(unittest.TestCase):
         names = []
         row = sidebar.get_row_at_index(0)
         while row is not None:
-            names.append(row.get_child().get_last_child().get_prev_sibling().get_label())
+            names.append(row.get_child().get_last_child().get_label())
             row = sidebar.get_row_at_index(len(names))
         self.assertEqual(names, titles)
         sidebar.select_row(sidebar.get_row_at_index(len(titles) - 1))
-        self.assertIs(self.window.stack.get_visible_child(), self.window.check.page)
-        self.assertEqual(self.window.content.get_title(), "Check")
+        self.assertIs(self.window.stack.get_visible_child(), self.window.whats_new.page)
+        self.assertEqual(self.window.content.get_title(), "What's new & tips")
         # Shown another way, the page still names itself and its row follows.
         self.window.stack.set_visible_child(self.window.macros.page)
         self.assertEqual(self.window.content.get_title(), titles[1])
         self.assertEqual(sidebar.get_selected_row().get_index(), 1)
-        left = len(self.window.check.findings)
-        self.assertEqual(self.window.check_badge.get_label(), str(left))
-        self.assertEqual(self.window.check_badge.get_visible(), left > 0)
 
     def search(self, text):
         self.window.search_entry.set_text(text)
@@ -539,7 +475,7 @@ class WindowTest(unittest.TestCase):
         results = self.search("spell check dictionary")
         self.assertEqual([r.found[0] for r in results if hasattr(r, "found")], [spell])
         self.assertEqual(self.window.side_stack.get_visible_child_name(), "results")
-        self.window.stack.set_visible_child(self.window.check.page)
+        self.window.stack.set_visible_child(self.window.whats_new.page)
         self.window.search_entry.emit("activate")
         self.assertIs(
             self.window.stack.get_visible_child(), spell.get_ancestor(Adw.PreferencesPage)
@@ -617,26 +553,8 @@ class WindowTest(unittest.TestCase):
         short = {"text": "Space twice types a period.", "target": None}
         with mock.patch.object(window.whats_new, "random_tip", return_value=short):
             self.window.destroy()
-            self.window = window.Window(
-                None, self.store, self.window.rows.names, "1.0.0", FakeSources()
-            )
+            self.window = window.Window(None, self.store, self.window.rows.names, "1.0.0")
         self.assertFalse([r for r in self.search("space twice") if hasattr(r, "found")])
-
-    def test_check_page_counts_the_steps_left(self):
-        check = self.window.check
-        self.assertEqual(self.window.check_tab.get_badge_number(), len(check.findings))
-        self.assertEqual(len(check.rows), len(check.found))
-        self.assertIn("Ngó Sen", check.report_text())
-        rules = os.path.join(self.folder, "ngosen-app-rules.conf")
-        self.assertEqual(check.app_modes_file, rules)
-
-    def test_check_page_reads_the_typing_mode(self):
-        self.window.save("DirectTyping", "True")
-        self.assertTrue(self.window.check.facts.direct_typing)
-        # Picked from the engine's menu, which writes the file without the window.
-        with open(self.store.settings_file, "w", encoding="utf-8") as f:
-            f.write("DirectTyping=False\n")
-        self.assertFalse(self.window.check.direct_typing())
 
     def test_chosen_value_is_never_cut(self):
         # A wrapped subtitle can leave the value no room, so "Ctrl+Shift" showed as "C…".

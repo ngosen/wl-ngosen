@@ -6,7 +6,7 @@ import os
 
 from . import ini, store
 
-DOMAIN = "ibus-ngosen"
+DOMAIN = "wl-ngosen"
 
 _translation = gettext.NullTranslations()
 

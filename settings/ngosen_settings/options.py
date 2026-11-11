@@ -119,17 +119,17 @@ LABELS = {
 
 HINTS = {
     "ToggleKey": N_(
-        "Tap the keys together and let go; the top bar shows V or E. Super+Space still switches input sources."
+        "Tap the keys together and let go; the tray icon and a short notification show the language."
     ),
     "ModeMenuKey": N_(
         "Opens a menu to pick Sen, underlined typing or Off for the app in use. Press it twice to type the key itself; while typing English it types as usual."
     ),
-    "UiLanguage": N_("The top bar menu changes at once, this window the next time it opens."),
+    "UiLanguage": N_("The tray menu changes at once, this window the next time it opens."),
     "CycleModeKey": N_(
         "Moves the app in use to the next mode in the list below, and remembers it for that app."
     ),
     "ModeOrder": N_(
-        "With the mode menu open, press a mode's key to pick it for the app in use. Pick the app's usual mode again to make it follow the global setting."
+        "A mode picked in the tray menu is kept for the app in use. Pick the app's usual mode again to make it follow the global setting."
     ),
     "OutputCharset": N_(
         "Keep Unicode unless an old document or app needs another one, such as TCVN3 (ABC)."
@@ -161,7 +161,7 @@ HINTS = {
     "BracketTransform": N_("ch]a → chưa, m[f → mờ. Type a bracket twice to get it back: [[ → [."),
     "AutoCapitalizeAfterPunctuation": N_("ban. tooi → ban. Tôi. The same after Enter."),
     "CapitalizeStartOfText": N_(
-        "xin → Xin in an empty field or on a new line. Not in address bars or some apps; on GNOME 47 and later, Chrome and similar apps skip an empty field."
+        "xin → Xin in an empty field or on a new line. Not in address bars or some apps."
     ),
     "DoubleSpaceToPeriod": N_("ban and Space twice gives “ban. ”."),
     "DoubleHyphenToEmDash": N_("a--b → a—b."),
@@ -187,8 +187,6 @@ TYPING_GROUPS = [
         [
             "InputMethod",
             "ToggleKey",
-            "ModeMenuKey",
-            "CycleModeKey",
             "DirectTyping",
             "OutputCharset",
         ],
@@ -203,7 +201,6 @@ TYPING_GROUPS = [
             "ModernStyle",
             "FreeMarking",
             "BackspaceRemovesTone",
-            "RetoneSelection",
             "W2U",
             "BracketTransform",
         ],
@@ -211,15 +208,15 @@ TYPING_GROUPS = [
     (
         N_("Quick typing"),
         [
-            "RetypeAfterSwitch",
             "AutoCapitalizeAfterPunctuation",
             "CapitalizeStartOfText",
             "DoubleSpaceToPeriod",
             "DoubleHyphenToEmDash",
         ],
     ),
-    (N_("Mode menu"), ["ModeOrder", *SHOW_MODES, *SHORTCUTS]),
-    (N_("Show in the top bar menu"), SHOW_MENUS),
+    # No mode menu in the field, mode keys, Vim mode, Cứu dấu or Cứu chữ in this edition.
+    (N_("Modes in the tray menu"), ["ModeOrder", "ShowModeSen", "ShowModePreedit", "ShowModeOff"]),
+    (N_("Show in the tray menu"), SHOW_MENUS),
     (N_("Language"), ["UiLanguage"]),
 ]
 MACRO_SWITCHES = ["EnableMacro", "CapitalizeMacro", "EnableMacroInOffMode"]

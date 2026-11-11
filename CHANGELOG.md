@@ -27,6 +27,8 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   qua cửa sổ đang chọn của compositor; app Flatpak mang tên như bản IBus đặt (#8).
 - Biểu tượng ngó sen ở khay hệ thống: bấm để đổi Anh/Việt; menu (Waybar có, swaybar không) chọn chế độ gõ cho app
   đang dùng, kiểu gõ, bảng mã, các công tắc như bản IBus và lưu nhật ký gõ. Phím đổi Anh/Việt hiện thông báo ngắn (#10).
+- Cửa sổ cài đặt như bản IBus, mở từ mục Cài đặt ở menu khay hoặc lệnh `wl-ngosen-settings`; sao lưu và khôi phục
+  dùng chung tệp với bản IBus và bản fcitx5. Không có trang Kiểm tra máy (#11).
 
 ### Sửa
 

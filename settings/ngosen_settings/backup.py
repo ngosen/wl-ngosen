@@ -175,7 +175,7 @@ def export(engine, paths, target):
         backup["dictionary"] = dictionary.decode("utf-8")
     backup["meta"] = {
         "version": 1,
-        "edition": "ibus",
+        "edition": "wl",
         "timestamp": datetime.now().isoformat(),
         "components": [k for k in COMPONENTS if k in backup],
     }

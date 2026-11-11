@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Ngó Sen contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The ini dialect of fcitx5, as src/ngosen-ibus-config.cpp reads it."""
+"""The ini dialect of fcitx5, as src/shared/ngosen-ibus-config.cpp reads it."""
 
 ESCAPES = {"\\": "\\", '"': '"', "n": "\n", "f": "\f", "r": "\r", "t": "\t", "v": "\v"}
 ESCAPED = {char: "\\" + letter for letter, char in ESCAPES.items()}
