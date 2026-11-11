@@ -12,6 +12,7 @@ Bộ gõ tiếng Việt Ngó Sen chạy thẳng trên giao thức Wayland input-
   Wayland). App X11 hay Xwayland, như Zalo (Electron 22), không gõ được.
 - Không chạy trên GNOME hay KDE: hai desktop này không có input-method-v2.
 - Không có emoji, Cứu chữ, Cứu dấu và menu phím ` của bản fcitx5. Chọn chế độ gõ ở menu khay.
+- swaybar không hiện menu khay của app nào: bấm biểu tượng chỉ đổi Anh/Việt. Muốn có menu thì dùng Waybar.
 
 ## Dựng từ mã nguồn
 
