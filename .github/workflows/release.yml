@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'wl-ngosen-*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check-version:
+    name: Tag matches the packaging files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history, so the tag can be compared with main.
+          fetch-depth: 0
+
+      # A tag on a commit that was never merged would publish packages built from unreviewed code.
+      - name: Refuse a tag that is not on main
+        run: |
+          git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::$GITHUB_REF_NAME points at a commit that is not on main"
+            exit 1
+          fi
+
+      - name: Compare the tag with the packaging versions
+        run: packaging/check-version.sh "${GITHUB_REF_NAME#wl-ngosen-}"
+
+  build:
+    needs: check-version
+    uses: ./.github/workflows/packaging.yml
+
+  release:
+    name: Draft GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts/
+
+      - name: Collect release files
+        run: packaging/collect-release-files.sh artifacts dist
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'dist/*'
+
+      # A draft, so the files can be checked before anyone can download them.
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#wl-ngosen-}
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --draft \
+            --title "Ngó Sen for Wayland ${version%-*}" \
+            --notes "See CHANGELOG.md."
