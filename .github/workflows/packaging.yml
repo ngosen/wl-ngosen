@@ -179,7 +179,7 @@ jobs:
       - name: Install and run on a clean system
         run: |
           docker run --rm -v "$PWD:/work" -w /work opensuse/tumbleweed bash -euc '
-            zypper -n --no-gpg-checks install --allow-unsigned-rpm $(ls output/wl-ngosen-[0-9]*.rpm) xvfb-run /usr/bin/xwininfo
+            zypper -n --no-gpg-checks install --allow-unsigned-rpm $(ls output/wl-ngosen-[0-9]*.rpm) xvfb-run xwininfo
             packaging/check-installed.sh'
 
       - name: Upload RPM artifact
