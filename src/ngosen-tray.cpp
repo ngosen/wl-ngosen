@@ -137,6 +137,8 @@ namespace ngosen {
             g_error_free(error);
             return false;
         }
+        // GDBus quits the program when the bus goes away; typing must outlive the tray.
+        g_dbus_connection_set_exit_on_close(bus_, FALSE);
         itemObject_ = g_dbus_connection_register_object(bus_, ItemPath, nodeInfo()->interfaces[0], &VTable, this, nullptr, nullptr);
         menuObject_ = g_dbus_connection_register_object(bus_, MenuPath, nodeInfo()->interfaces[1], &VTable, this, nullptr, nullptr);
         name_       = "org.kde.StatusNotifierItem-" + std::to_string(getpid()) + "-1";
@@ -185,6 +187,26 @@ namespace ngosen {
     }
 
     void Tray::show(std::vector<TrayItem> menu, bool english) {
+        // The daemon calls this at every focus change; a bar rebuilds an open menu on each update.
+        const bool sameMenu = !items_.empty() && menu == menu_;
+        const bool sameTip  = english == english_ && tipLabel_ == _("Vietnamese");
+        if (sameMenu && sameTip)
+            return;
+        tipLabel_ = _("Vietnamese");
+        if (!sameMenu)
+            setMenu(std::move(menu));
+        if (bus_ == nullptr)
+            return;
+        if (!sameMenu)
+            g_dbus_connection_emit_signal(bus_, nullptr, MenuPath, MenuInterface, "LayoutUpdated", g_variant_new("(ui)", revision_, 0), nullptr);
+        if (english != english_) {
+            english_ = english;
+            emitItem("NewIcon", nullptr);
+        }
+        emitItem("NewToolTip", nullptr);
+    }
+
+    void Tray::setMenu(std::vector<TrayItem> menu) {
         menu_ = std::move(menu);
         items_.assign(1, nullptr);
         children_.assign(1, {});
@@ -200,14 +222,6 @@ namespace ngosen {
         };
         add(menu_, 0);
         ++revision_;
-        if (bus_ == nullptr)
-            return;
-        g_dbus_connection_emit_signal(bus_, nullptr, MenuPath, MenuInterface, "LayoutUpdated", g_variant_new("(ui)", revision_, 0), nullptr);
-        if (english != english_) {
-            english_ = english;
-            emitItem("NewIcon", nullptr);
-            emitItem("NewToolTip", nullptr);
-        }
     }
 
     void Tray::emitItem(const char* signal, GVariant* parameters) {

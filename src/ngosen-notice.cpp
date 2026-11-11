@@ -32,6 +32,8 @@ namespace ngosen {
 
     Notice::Notice() {
         bus_ = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
+        if (bus_ != nullptr)
+            g_dbus_connection_set_exit_on_close(bus_, FALSE);
     }
 
     Notice::~Notice() {

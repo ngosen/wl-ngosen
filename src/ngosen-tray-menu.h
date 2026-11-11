@@ -39,6 +39,11 @@ namespace ngosen {
         bool                  visible = true;
         bool                  enabled = true;
         std::vector<TrayItem> children;
+
+        bool                  operator==(const TrayItem& other) const {
+            return action == other.action && label == other.label && kind == other.kind && checked == other.checked && visible == other.visible && enabled == other.enabled &&
+                children == other.children;
+        }
     };
 
     // What the menu shows around the settings: the language and the mode of the app in use.

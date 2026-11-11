@@ -29,12 +29,21 @@ namespace test {
         }
         std::string address() const;
         void        startWatcher();
+        // Stops the bus under the daemon, as a restarted dbus-daemon would.
+        void down();
         // Runs what arrived on the bus; call it while waiting.
         void pump();
 
         // Bus names the tray icons gave the watcher.
         const std::vector<std::string>& registered() const {
             return registered_;
+        }
+        // How many times a menu said its layout changed.
+        int layoutUpdates() const {
+            return layoutUpdates_;
+        }
+        void noteLayoutUpdate() {
+            ++layoutUpdates_;
         }
         // Summaries of the notifications shown.
         const std::vector<std::string>& notices() const {
@@ -59,7 +68,8 @@ namespace test {
 
         GTestDBus*               bus_        = nullptr;
         GDBusConnection*         connection_ = nullptr;
-        unsigned                 watcherOwn_ = 0, watcherObject_ = 0, noticeOwn_ = 0, noticeObject_ = 0;
+        unsigned                 watcherOwn_ = 0, watcherObject_ = 0, noticeOwn_ = 0, noticeObject_ = 0, layoutSignal_ = 0;
+        int                      layoutUpdates_ = 0;
         std::vector<std::string> registered_;
         std::vector<std::string> notices_;
     };

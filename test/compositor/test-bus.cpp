@@ -80,10 +80,20 @@ namespace test {
             return;
         noticeObject_ = g_dbus_connection_register_object(connection_, "/org/freedesktop/Notifications", nodeInfo()->interfaces[1], &VTable, this, nullptr, nullptr);
         noticeOwn_    = g_bus_own_name_on_connection(connection_, "org.freedesktop.Notifications", G_BUS_NAME_OWNER_FLAGS_NONE, nullptr, nullptr, nullptr, nullptr);
+        layoutSignal_ = g_dbus_connection_signal_subscribe(
+            connection_, nullptr, "com.canonical.dbusmenu", "LayoutUpdated", nullptr, nullptr, G_DBUS_SIGNAL_FLAGS_NONE,
+            [](GDBusConnection*, const char*, const char*, const char*, const char*, GVariant*, gpointer data) { static_cast<TestBus*>(data)->noteLayoutUpdate(); }, this, nullptr);
     }
 
     TestBus::~TestBus() {
+        down();
+        g_object_unref(bus_);
+    }
+
+    void TestBus::down() {
         if (connection_ != nullptr) {
+            if (layoutSignal_ != 0)
+                g_dbus_connection_signal_unsubscribe(connection_, layoutSignal_);
             for (unsigned own : {watcherOwn_, noticeOwn_}) {
                 if (own != 0)
                     g_bus_unown_name(own);
@@ -94,9 +104,10 @@ namespace test {
             }
             g_dbus_connection_close_sync(connection_, nullptr, nullptr);
             g_object_unref(connection_);
+            connection_ = nullptr;
         }
-        g_test_dbus_down(bus_);
-        g_object_unref(bus_);
+        if (g_test_dbus_get_bus_address(bus_) != nullptr)
+            g_test_dbus_down(bus_);
     }
 
     std::string TestBus::address() const {

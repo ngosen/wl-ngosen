@@ -69,7 +69,8 @@ int main(int argc, char** argv) {
     // Menu labels are Vietnamese whatever the desktop language is, as in the IBus edition; the
     // English setting shows the strings as written.
     g_setenv("LANGUAGE", "vi", TRUE);
-    std::setlocale(LC_ALL, "");
+    // Messages only: numbers in the typing log keep the dot the IBus edition writes.
+    std::setlocale(LC_MESSAGES, "");
     const char* localeDir = std::getenv("NGOSEN_WL_LOCALEDIR");
     bindtextdomain(GETTEXT_PACKAGE, localeDir != nullptr ? localeDir : NGOSEN_LOCALEDIR);
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");

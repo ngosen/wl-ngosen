@@ -844,6 +844,12 @@ namespace {
               "the menu names the app in use", &compositor);
         const std::string item = bus.registered().back();
         check(bus.toggleState(item, "Preedit") == 1, "the menu checks the mode the app types in", &compositor);
+        const int updates = bus.layoutUpdates();
+        // Another program writes a file the menu does not show.
+        std::ofstream(root / "tray-app" / ".config/ngosen/ngosen-macro-table.conf") << "vn:Việt Nam\n";
+        compositor.runFor(1500);
+        bus.pump();
+        check(bus.layoutUpdates() == updates, "a file change that leaves the menu as it was does not redraw an open menu", &compositor);
         // The shared mode is Preedit, so Sen is kept for the app.
         bus.click(item, bus.menuId(item, "Sen"));
         check(compositor.waitFor([&] {
@@ -892,6 +898,26 @@ namespace {
         compositor.stop();
     }
 
+    void testTrayBusGone() {
+        TestBus bus;
+        check(bus.up(), "a bus to take away");
+        if (!bus.up())
+            return;
+        bus.startWatcher();
+        TestCompositor compositor({});
+        check(begin(compositor, "tray-gone", TrayEnglish, Language::Vietnamese, {"DBUS_SESSION_BUS_ADDRESS=" + bus.address()}) && focus(compositor),
+              "setup for a bus that goes away", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return !bus.registered().empty();
+        }),
+              "the icon registers before the bus goes away", &compositor);
+        bus.down();
+        // A crash here would stop typing in every app.
+        check(compositor.waitExit(500) == -1, "the daemon keeps running when the session bus goes away", &compositor);
+        compositor.stop();
+    }
+
     void testTray() {
         TestBus bus;
         check(bus.up(), "a private session bus for the tray");
@@ -903,6 +929,7 @@ namespace {
         testTrayModes(bus, env);
         testTrayVietnamese(bus, env);
         testTrayLateWatcher({});
+        testTrayBusGone();
     }
 
 } // namespace

@@ -43,6 +43,7 @@ namespace ngosen {
 
       private:
         void                  registerWithWatcher();
+        void                  setMenu(std::vector<TrayItem> menu);
         void                  menuCall(const char* method, GVariant* parameters, GDBusMethodInvocation* invocation);
         bool                  knownItem(gint32 id) const;
         void                  getLayout(GVariant* parameters, GDBusMethodInvocation* invocation);
@@ -67,6 +68,8 @@ namespace ngosen {
         std::vector<std::vector<int>> children_;
         guint                         revision_ = 0;
         bool                          english_  = false;
+        // The tooltip's label as last sent, so a change of UiLanguage reaches the bar.
+        std::string tipLabel_;
     };
 
 } // namespace ngosen
