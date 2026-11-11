@@ -96,7 +96,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/work" -w /work "${{ matrix.distro }}" bash -euc '
             apt-get -qq update
-            DEBIAN_FRONTEND=noninteractive apt-get -qq install -y ./debian/artifacts/wl-ngosen_*.deb xvfb xauth
+            DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends ./debian/artifacts/wl-ngosen_*.deb xvfb xauth x11-utils
             packaging/check-installed.sh'
 
       - name: Upload DEB artifact
@@ -138,7 +138,7 @@ jobs:
       - name: Install and run on a clean system
         run: |
           docker run --rm -v "$PWD:/work" -w /work "${{ matrix.distro }}" bash -euc '
-            dnf install -y $(ls output/wl-ngosen-[0-9]*.rpm) xorg-x11-server-Xvfb xauth
+            dnf install -y $(ls output/wl-ngosen-[0-9]*.rpm) xorg-x11-server-Xvfb xauth /usr/bin/xwininfo
             packaging/check-installed.sh'
 
       - name: Upload RPM artifact
@@ -179,7 +179,7 @@ jobs:
       - name: Install and run on a clean system
         run: |
           docker run --rm -v "$PWD:/work" -w /work opensuse/tumbleweed bash -euc '
-            zypper -n --no-gpg-checks install --allow-unsigned-rpm $(ls output/wl-ngosen-[0-9]*.rpm) xvfb-run
+            zypper -n --no-gpg-checks install --allow-unsigned-rpm $(ls output/wl-ngosen-[0-9]*.rpm) xvfb-run /usr/bin/xwininfo
             packaging/check-installed.sh'
 
       - name: Upload RPM artifact
@@ -216,7 +216,7 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work archlinux:latest bash -euc '
             pacman -Syu --noconfirm
             pacman -U --noconfirm output/wl-ngosen-[0-9]*-x86_64.pkg.tar.zst
-            pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth
+            pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth xorg-xwininfo
             packaging/check-installed.sh'
 
       - name: Upload Arch artifact
@@ -230,6 +230,8 @@ jobs:
   side-by-side:
     name: Installs beside ${{ matrix.edition }}
     needs: build-deb
+    # One broken deb target elsewhere must not skip this job; a missing noble deb still fails it.
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -254,7 +256,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/work" -w /work ubuntu:24.04 bash -euc '
             apt-get -qq update
-            DEBIAN_FRONTEND=noninteractive apt-get -qq install -y ./debs/*.deb xvfb xauth
+            DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends ./debs/*.deb xvfb xauth x11-utils
             packaging/check-installed.sh'
 
   # Lays the packages out as a release would, so a missing or renamed package fails here rather than
