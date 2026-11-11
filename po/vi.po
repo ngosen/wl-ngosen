@@ -1,0 +1,71 @@
+# Vietnamese translation of wl-ngosen.
+# Strings shared with the IBus edition use its translation.
+msgid ""
+msgstr ""
+"Project-Id-Version: wl-ngosen\n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Vietnamese"
+msgstr "Tiếng Việt"
+
+msgid "English"
+msgstr "Tiếng Anh"
+
+msgid "Typing mode"
+msgstr "Chế độ gõ"
+
+#, c-format
+msgid "Typing mode for %s"
+msgstr "Chế độ gõ cho %s"
+
+msgid "Sen"
+msgstr "Gõ Sen"
+
+msgid "Preedit"
+msgstr "Gạch chân"
+
+msgid "OFF"
+msgstr "Tắt"
+
+msgid "Input Method"
+msgstr "Kiểu gõ"
+
+msgid "Charset"
+msgstr "Bảng mã"
+
+msgid "Spell Check"
+msgstr "Kiểm tra chính tả"
+
+msgid "Macro"
+msgstr "Gõ tắt"
+
+msgid "Capitalize Macro"
+msgstr "Gõ tắt chữ hoa"
+
+msgid "Auto Capitalize"
+msgstr "Tự viết hoa"
+
+msgid "After . ! ? and Enter"
+msgstr "Sau dấu . ! ? và Enter"
+
+msgid "Start of text or line"
+msgstr "Đầu văn bản, đầu dòng"
+
+msgid "Auto Restore Invalid Words"
+msgstr "Tự khôi phục từ gõ sai"
+
+msgid "Custom Dictionary"
+msgstr "Từ điển tuỳ chỉnh"
+
+msgid "Save typing log"
+msgstr "Lưu nhật ký gõ"
+
+msgid "Typing log saved: "
+msgstr "Đã lưu nhật ký gõ: "
+
+msgid "Could not save the typing log to "
+msgstr "Không lưu được nhật ký gõ vào "

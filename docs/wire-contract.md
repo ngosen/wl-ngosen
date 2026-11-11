@@ -128,3 +128,23 @@ The mode follows the IBus edition's rules and files: the toggle key's last choic
 `DirectTyping`. The app is named as there: a Flatpak app_id becomes the name its exported desktop
 file's `StartupWMClass` gives (`gnomeProgramName`), then `modeAppName`. `Field.program` carries that
 name, and `reportedProgram` the app_id when they differ.
+
+## Tray
+
+The icon is a StatusNotifierItem at `/StatusNotifierItem` on the session bus, named
+`org.kde.StatusNotifierItem-<pid>-1`, with a `com.canonical.dbusmenu` menu at `/MenuBar`. It registers
+with `org.kde.StatusNotifierWatcher`, again whenever a watcher appears, so a bar started after the
+daemon still shows it. Without a session bus the daemon types on without a tray.
+
+- `IconName` is a theme name, `wl-ngosen` or `wl-ngosen-off` (English), with `IconThemePath` set to
+  the installed icon directory: swaybar finds only theme names. `Activate` (a left click) switches the
+  language like the toggle key.
+- The menu is rebuilt and `LayoutUpdated` sent after every change, from the menu, the toggle key, a
+  new app or a settings file changed by another program. A click replies first, then acts.
+- A mode picked in the menu follows the IBus edition's mode menu: kept for the app in use in
+  `ngosen-app-rules.conf`, unless it is the mode the app gets anyway; with no app name it changes the
+  shared mode. Settings items write `ngosen.conf` as the settings window does.
+- The toggle key shows a notification (`org.freedesktop.Notifications.Notify`) that replaces the last
+  one, so a quick double switch leaves one on screen.
+- Labels are Vietnamese unless `UiLanguage=English`, whatever the desktop language, as in the IBus
+  edition. gettext ignores this in the C and C.UTF-8 locales, where the labels stay English.

@@ -259,6 +259,9 @@ namespace test {
         setenv("XDG_STATE_HOME", (home + "/.local/state").c_str(), 1);
         setenv("NGOSEN_LOG_FILE", (home + "/daemon.log").c_str(), 1);
         setenv("NGOSEN_DEBUG", "1", 1);
+        // Never the desktop's bus: a tray icon or notification would reach the real session. A case
+        // that needs a bus passes a private one in env.
+        setenv("DBUS_SESSION_BUS_ADDRESS", ("unix:path=" + home + "/no-bus").c_str(), 1);
         for (const auto& entry : env) {
             const auto eq = entry.find('=');
             setenv(entry.substr(0, eq).c_str(), entry.substr(eq + 1).c_str(), 1);

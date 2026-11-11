@@ -5,6 +5,7 @@
  */
 // The daemon against a compositor that writes down every request, for the order rules of
 // input-method-v2 and the virtual keyboard that a real compositor punishes with a disconnect.
+#include "compositor/test-bus.h"
 #include "compositor/test-compositor.h"
 
 #include <cstdlib>
@@ -15,6 +16,7 @@
 #include <string>
 
 namespace fs = std::filesystem;
+using test::TestBus;
 using test::TestCompositor;
 
 namespace {
@@ -67,7 +69,8 @@ namespace {
     const std::string PreeditOnly = "DirectTyping=False\n";
 
     // English unless asked: most checks are about keys reaching the app, which typing Vietnamese changes.
-    bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "", Language language = Language::English) {
+    bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "", Language language = Language::English,
+               const std::vector<std::string>& extraEnv = {}) {
         const std::string home = freshHome(name);
         if (language == Language::English) {
             fs::create_directories(fs::path(home) / ".local/state/ngosen");
@@ -78,7 +81,9 @@ namespace {
             std::ofstream(fs::path(home) / ".config/ngosen/ngosen.conf") << settings;
         }
         // Flatpak exports in the test home only, so the host's installed apps cannot rename one.
-        compositor.start(program, home, {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY, "XDG_DATA_DIRS=" + home + "/flatpak/exports/share"});
+        std::vector<std::string> env = {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY, "XDG_DATA_DIRS=" + home + "/flatpak/exports/share"};
+        env.insert(env.end(), extraEnv.begin(), extraEnv.end());
+        compositor.start(program, home, env);
         return compositor.waitFor([&] { return compositor.hasClient() && compositor.logged("vk.create"); });
     }
 
@@ -783,6 +788,123 @@ namespace {
         }
     }
 
+    // Menu labels in English, whatever catalog the machine has installed.
+    const std::string TrayEnglish = PreeditOnly + "UiLanguage=English\n";
+
+    bool              fileHas(const std::string& name, const std::string& file, const std::string& text) {
+        return readConfig(name, file).find(text) != std::string::npos;
+    }
+
+    void testTrayIcon(TestBus& bus, const std::vector<std::string>& env) {
+        TestCompositor    compositor({});
+        const std::size_t before = bus.registered().size();
+        check(begin(compositor, "tray", TrayEnglish, Language::Vietnamese, env) && focus(compositor), "setup for the tray", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return bus.registered().size() > before;
+        }),
+              "the tray icon registers with the bar's watcher", &compositor);
+        const std::string item = bus.registered().back();
+        check(bus.iconName(item) == "wl-ngosen", "the icon shows Vietnamese", &compositor);
+        check(bus.toggleState(item, "Vietnamese") == 1, "the menu checks Vietnamese", &compositor);
+        bus.activate(item);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return englishMark("tray");
+        }),
+              "a click on the icon switches to English, shared with the IBus edition", &compositor);
+        check(bus.iconName(item) == "wl-ngosen-off", "the icon shows English", &compositor);
+        check(bus.toggleState(item, "Vietnamese") == 0, "the menu unchecks Vietnamese", &compositor);
+        bus.click(item, bus.menuId(item, "Spell Check"));
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return fileHas("tray", "ngosen.conf", "SpellCheck=False") && bus.toggleState(item, "Spell Check") == 0;
+        }),
+              "a click on Spell Check saves it and the menu shows what was saved", &compositor);
+        tapCtrlShift(compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return !bus.notices().empty() && bus.notices().back() == "Vietnamese";
+        }),
+              "the toggle key shows the new language in a notification", &compositor);
+        check(bus.iconName(item) == "wl-ngosen", "the icon follows the toggle key", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayModes(TestBus& bus, const std::vector<std::string>& env) {
+        TestCompositor    compositor({});
+        const std::size_t before = bus.registered().size();
+        check(begin(compositor, "tray-app", TrayEnglish, Language::Vietnamese, env), "setup for a mode picked in the tray", &compositor);
+        compositor.openToplevel("firefox", true);
+        check(focus(compositor), "focus for a mode picked in the tray", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return bus.registered().size() > before && bus.menuId(bus.registered().back(), "Typing mode for firefox") > 0;
+        }),
+              "the menu names the app in use", &compositor);
+        const std::string item = bus.registered().back();
+        check(bus.toggleState(item, "Preedit") == 1, "the menu checks the mode the app types in", &compositor);
+        // The shared mode is Preedit, so Sen is kept for the app.
+        bus.click(item, bus.menuId(item, "Sen"));
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return fileHas("tray-app", "ngosen-app-rules.conf", "firefox=2") && bus.toggleState(item, "Sen") == 1;
+        }),
+              "a mode picked in the menu is kept for the app, in the IBus edition's file", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayLateWatcher(const std::vector<std::string>& extra) {
+        TestBus bus;
+        check(bus.up(), "a second private bus");
+        if (!bus.up())
+            return;
+        std::vector<std::string> env = extra;
+        env.push_back("DBUS_SESSION_BUS_ADDRESS=" + bus.address());
+        TestCompositor compositor({});
+        check(begin(compositor, "tray-late", TrayEnglish, Language::Vietnamese, env) && focus(compositor), "setup for a bar started later", &compositor);
+        compositor.runFor(100);
+        bus.startWatcher();
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return !bus.registered().empty();
+        }),
+              "the icon registers with a bar started after the daemon", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayVietnamese(TestBus& bus, const std::vector<std::string>& env) {
+        TestCompositor           compositor({});
+        const std::size_t        before     = bus.registered().size();
+        std::vector<std::string> vietnamese = env;
+        // An English desktop; gettext ignores LANGUAGE in the C and C.UTF-8 locales.
+        vietnamese.push_back("LC_ALL=en_US.UTF-8");
+        vietnamese.push_back(std::string("NGOSEN_WL_LOCALEDIR=") + TEST_LOCALEDIR);
+        check(begin(compositor, "tray-vi", PreeditOnly, Language::Vietnamese, vietnamese) && focus(compositor), "setup for a Vietnamese menu", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return bus.registered().size() > before;
+        }),
+              "the tray registers for a Vietnamese menu", &compositor);
+        const std::string item = bus.registered().back();
+        check(bus.toggleState(item, "Tiếng Việt") == 1, "the menu is in Vietnamese whatever the desktop language", &compositor);
+        check(bus.menuId(item, "Gõ Sen") > 0, "mode names are the IBus edition's", &compositor);
+        compositor.stop();
+    }
+
+    void testTray() {
+        TestBus bus;
+        check(bus.up(), "a private session bus for the tray");
+        if (!bus.up())
+            return;
+        bus.startWatcher();
+        const std::vector<std::string> env = {"DBUS_SESSION_BUS_ADDRESS=" + bus.address()};
+        testTrayIcon(bus, env);
+        testTrayModes(bus, env);
+        testTrayVietnamese(bus, env);
+        testTrayLateWatcher({});
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -808,6 +930,7 @@ int main(int argc, char** argv) {
     testSen();
     testAppModes();
     testRepeat();
+    testTray();
     // A failed run keeps each daemon's home, with its log.
     if (failures == 0) {
         fs::remove_all(root);

@@ -25,6 +25,8 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   Bấm chuột vào giữa một chữ rồi gõ tiếp vẫn có thể sửa nhầm chữ cũ, giống bản fcitx5 trên Sway và Hyprland (#7).
 - Nhớ chế độ gõ và lựa chọn Anh/Việt theo từng app như bản IBus và fcitx5, dùng chung tệp cài đặt; app được nhận ra
   qua cửa sổ đang chọn của compositor; app Flatpak mang tên như bản IBus đặt (#8).
+- Biểu tượng ngó sen ở khay hệ thống (Waybar, swaybar, Noctalia): bấm để đổi Anh/Việt; menu chọn chế độ gõ cho app
+  đang dùng, kiểu gõ, bảng mã, các công tắc như bản IBus và lưu nhật ký gõ. Phím đổi Anh/Việt hiện thông báo ngắn (#10).
 
 ### Sửa
 

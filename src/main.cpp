@@ -9,8 +9,11 @@
 #include "ngosen-ibus-keys.h"
 #include "ngosen-ibus-resources.h"
 
+#include <clocale>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <glib/gi18n-lib.h>
 
 namespace {
 
@@ -63,5 +66,12 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "wl-ngosen: unknown option %s\n", argv[1]);
         return 2;
     }
+    // Menu labels are Vietnamese whatever the desktop language is, as in the IBus edition; the
+    // English setting shows the strings as written.
+    g_setenv("LANGUAGE", "vi", TRUE);
+    std::setlocale(LC_ALL, "");
+    const char* localeDir = std::getenv("NGOSEN_WL_LOCALEDIR");
+    bindtextdomain(GETTEXT_PACKAGE, localeDir != nullptr ? localeDir : NGOSEN_LOCALEDIR);
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
     return ngosen::runDaemon();
 }
