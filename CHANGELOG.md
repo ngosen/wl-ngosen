@@ -29,6 +29,8 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   đang dùng, kiểu gõ, bảng mã, các công tắc như bản IBus và lưu nhật ký gõ. Phím đổi Anh/Việt hiện thông báo ngắn (#10).
 - Cửa sổ cài đặt như bản IBus, mở từ mục Cài đặt ở menu khay hoặc lệnh `wl-ngosen-settings`; sao lưu và khôi phục
   dùng chung tệp với bản IBus và bản fcitx5. Không có trang Kiểm tra máy (#11).
+- Gói cài cho Debian 13, Ubuntu 24.04 trở lên, Fedora 43 trở lên, openSUSE Tumbleweed và Arch Linux; cài được cùng
+  máy với bản fcitx5 và bản IBus (#12).
 
 ### Sửa
 

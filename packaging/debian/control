@@ -1,0 +1,28 @@
+Source: wl-ngosen
+Section: utils
+Priority: optional
+Maintainer: Nguyen Phi <nguyenphidt@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               g++,
+               cargo (>= 1.88) | cargo-1.91 | cargo-web,
+               rustc (>= 1.88) | rustc-1.91 | rustc-web,
+               pkg-config,
+               libglib2.0-dev (>= 2.72),
+               libxkbcommon-dev,
+               libwayland-dev,
+               libwayland-bin,
+               python3,
+               gettext
+Standards-Version: 4.6.0
+Homepage: https://github.com/ngosen/wl-ngosen
+
+Package: wl-ngosen
+Architecture: any
+# The settings window loads these through GObject introspection, which shlibs cannot see.
+Depends: python3, python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1 (>= 1.5), hicolor-icon-theme, ${misc:Depends}, ${shlibs:Depends}
+Description: Ngó Sen for Wayland, a Vietnamese input method without fcitx5 or IBus
+ Ngó Sen for Wayland types Vietnamese on compositors that offer
+ input-method-v2, such as niri, Sway and Hyprland, without fcitx5 or IBus.
+ A small daemon types through the Ngó Sen core and shows a tray icon with
+ the typing modes. It shares its settings with the other Ngó Sen editions.

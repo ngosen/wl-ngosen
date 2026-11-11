@@ -1,0 +1,32 @@
+# Maintainer: Nguyen Phi <nguyenphidt at gmail dot com>
+#
+# Builds the checked-out tree this file sits in, so nothing is downloaded:
+#   cd packaging/arch && makepkg -si
+
+pkgname=wl-ngosen
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Ngó Sen for Wayland, a Vietnamese input method without fcitx5 or IBus"
+arch=('x86_64')
+url="https://github.com/ngosen/wl-ngosen"
+license=('GPL-3.0-or-later' 'LGPL-2.1-or-later' 'MIT' 'GPL-3.0-only' 'HPND-sell-variant')
+depends=('glib2' 'libxkbcommon' 'wayland' 'python' 'python-gobject' 'gtk4' 'libadwaita'
+         'hicolor-icon-theme' 'glibc' 'gcc-libs')
+makedepends=('cmake' 'rust' 'gettext')
+options=('!debug')
+
+build() {
+    cmake -S "$startdir/../.." -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DNGOSEN_WL_SESSION_TESTS=OFF
+    cmake --build build
+}
+
+check() {
+    ctest --test-dir build --output-on-failure -j"$(nproc)"
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}
