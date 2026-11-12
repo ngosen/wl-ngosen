@@ -62,5 +62,5 @@ its settings with the other Ngó Sen editions.
 %{_datadir}/icons/hicolor/scalable/status/wl-ngosen-off.svg
 
 %changelog
-* Wed Nov 11 2026 Nguyen Phi <nguyenphidt@gmail.com> - 0.1.0-1
+* Thu Nov 12 2026 Nguyen Phi <nguyenphidt@gmail.com> - 0.1.0-1
 - First release.

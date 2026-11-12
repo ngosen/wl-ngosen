@@ -4,7 +4,7 @@
 dùng KDE hay các desktop khác thì cài [Ngó Sen](https://github.com/ngosen/ngosen).
 
 Bộ gõ tiếng Việt Ngó Sen chạy thẳng trên giao thức Wayland input-method-v2, không cần fcitx5 hay IBus.
-Đây là **bản thử nghiệm** cho người quen tự cấu hình compositor. Đang làm, chưa có bản phát hành.
+Đây là **bản thử nghiệm** cho người quen tự cấu hình compositor.
 
 ## Giới hạn
 
@@ -16,7 +16,7 @@ Bộ gõ tiếng Việt Ngó Sen chạy thẳng trên giao thức Wayland input-
 
 ## Cài đặt
 
-wl-ngosen chưa có version phát hành. Khi có, gói sẽ nằm trong cùng repo có chữ ký với bộ gõ Ngó Sen cho fcitx5 và IBus, nên version mới sẽ đến qua update hệ thống (`dnf upgrade`, `apt upgrade`, `pacman -Syu`, `zypper up`).
+Gói wl-ngosen nằm trong cùng repo có chữ ký với bộ gõ Ngó Sen cho fcitx5 và IBus, nên version mới đến qua update hệ thống (`dnf upgrade`, `apt upgrade`, `pacman -Syu`, `zypper up`).
 
 Repo APT, pacman và zypper dùng chung key fingerprint `6D4A 2075 F985 3BE8 F6B6 FE7E 7550 1858 158B 36CD`; COPR dùng key của COPR. Nếu máy đã có repo Ngó Sen do từng cài bộ gõ cho fcitx5 hoặc IBus qua repo, chỉ cần chạy lệnh cài gói, không thêm repo lần nữa.
 
