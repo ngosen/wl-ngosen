@@ -1,0 +1,275 @@
+name: Packaging
+
+on:
+  push:
+    # Tags are built by the release workflow, which calls this one.
+    branches: [main, next, patch]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && github.run_id || (github.head_ref || github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  # A pull request that changes no packaging or build files builds one package per family. Pushes,
+  # releases and pull requests that do touch them build every target in .github/package-matrix.json.
+  scope:
+    name: Package targets
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+      deb: ${{ steps.scope.outputs.deb }}
+      fedora: ${{ steps.scope.outputs.fedora }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          full=true
+          # A failed diff leaves the full set.
+          if [ "$EVENT" = pull_request ] && changed=$(git diff --name-only "$BASE" HEAD) &&
+              ! printf '%s\n' "$changed" | grep -qE '^(packaging/|\.github/|ngosen$|settings/|data/|po/|protocol/)|CMakeLists\.txt$'; then
+              full=false
+          fi
+          filter='if $full then . else map(select(.pr)) end'
+          {
+              echo "full=$full"
+              echo "deb=$(jq -c --argjson full "$full" ".deb | $filter" .github/package-matrix.json)"
+              echo "fedora=$(jq -c --argjson full "$full" ".fedora | $filter" .github/package-matrix.json)"
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+  version:
+    name: Packaging versions agree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: packaging/check-version.sh "$(sed -n '1s/^[^(]*(\([^)]*\)).*/\1/p' packaging/debian/changelog)"
+
+  source:
+    name: Source tarball
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - run: packaging/make-source-tarball.sh output
+      - uses: actions/upload-artifact@v7
+        with:
+          name: source
+          path: output/*.tar.gz
+          retention-days: 3
+
+  build-deb:
+    name: DEB [${{ matrix.codename }}${{ matrix.arch == 'arm64' && ', arm64' || '' }}]
+    needs: scope
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.scope.outputs.deb) }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Prepare debian directory
+        run: cp -r packaging/debian debian
+
+      - name: Build DEB
+        uses: jtdor/build-deb-action@473136f14a42a231124c1f7cefaedfe941203c38 # v1.9.1
+        with:
+          docker-image: ${{ matrix.distro }}
+          buildpackage-opts: >-
+            --build=binary --no-sign
+
+      # A clean system, so a dependency the package forgot is missing here too.
+      - name: Install and run on a clean system
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "${{ matrix.distro }}" bash -euc '
+            apt-get -qq update
+            DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends ./debian/artifacts/wl-ngosen_*.deb xvfb xauth x11-utils
+            packaging/check-installed.sh'
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: deb-${{ matrix.codename }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}
+          path: debian/artifacts/*.deb
+          retention-days: 3
+
+  build-rpm-fedora:
+    name: RPM [fedora-${{ matrix.releasever }}${{ matrix.arch == 'arm64' && ', arm64' || '' }}]
+    needs: [scope, source]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.scope.outputs.fedora) }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The spec builds the same tarball a release publishes.
+      - uses: actions/download-artifact@v8
+        with:
+          name: source
+          path: sources/
+
+      - name: Build Fedora RPM
+        run: |
+          docker run --rm -v "$PWD:/work" "${{ matrix.distro }}" bash -euc '
+            dnf install -y rpm-build rpmdevtools dnf-plugins-core
+            rpmdev-setuptree
+            cp /work/packaging/rpm/wl-ngosen.spec ~/rpmbuild/SPECS/
+            cp /work/sources/*.tar.gz ~/rpmbuild/SOURCES/
+            dnf builddep --setopt=install_weak_deps=False -y ~/rpmbuild/SPECS/wl-ngosen.spec
+            rpmbuild -bb ~/rpmbuild/SPECS/wl-ngosen.spec
+            mkdir -p /work/output
+            find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} /work/output/ \;'
+
+      - name: Install and run on a clean system
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "${{ matrix.distro }}" bash -euc '
+            dnf install -y $(ls output/wl-ngosen-[0-9]*.rpm) xorg-x11-server-Xvfb xauth /usr/bin/xwininfo
+            packaging/check-installed.sh'
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: rpm-fedora-${{ matrix.releasever }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}
+          path: output/*.rpm
+          retention-days: 3
+
+  build-rpm-opensuse:
+    name: RPM [opensuse-tumbleweed]
+    needs: [scope, source]
+    if: needs.scope.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: source
+          path: sources/
+
+      - name: Build openSUSE RPM
+        run: |
+          docker run --rm -v "$PWD:/work" opensuse/tumbleweed bash -euc '
+            zypper -n dup
+            zypper -n install rpm-build rpmdevtools
+            rpmdev-setuptree
+            cp /work/packaging/rpm/opensuse/wl-ngosen.spec ~/rpmbuild/SPECS/
+            cp /work/sources/*.tar.gz ~/rpmbuild/SOURCES/
+            # zypper has no builddep for a bare spec.
+            zypper -n install $(rpmspec -P ~/rpmbuild/SPECS/wl-ngosen.spec |
+                sed -n "s/^BuildRequires: *//p" | sed "s/ *>=.*//")
+            rpmbuild -bb ~/rpmbuild/SPECS/wl-ngosen.spec
+            mkdir -p /work/output
+            find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} /work/output/ \;'
+
+      - name: Install and run on a clean system
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work opensuse/tumbleweed bash -euc '
+            zypper -n --no-gpg-checks install --allow-unsigned-rpm $(ls output/wl-ngosen-[0-9]*.rpm) xvfb-run xwininfo
+            packaging/check-installed.sh'
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: rpm-opensuse-tumbleweed
+          path: output/*.rpm
+          retention-days: 3
+
+  build-arch:
+    name: Arch Linux (pacman)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Build Arch package
+        run: |
+          docker run --rm -v "$PWD:/work" archlinux:latest bash -euc '
+            pacman -Syu --noconfirm --needed base-devel
+            # makepkg refuses to run as root.
+            useradd -m builder
+            echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
+            cp -r /work /home/builder/src
+            chown -R builder /home/builder/src
+            cd /home/builder/src/packaging/arch
+            sudo -u builder makepkg -s --noconfirm
+            mkdir -p /work/output
+            cp ./*.pkg.tar.zst /work/output/'
+
+      - name: Install and run on a clean system
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work archlinux:latest bash -euc '
+            pacman -Syu --noconfirm
+            pacman -U --noconfirm output/wl-ngosen-[0-9]*-x86_64.pkg.tar.zst
+            pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth xorg-xwininfo
+            packaging/check-installed.sh'
+
+      - name: Upload Arch artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: arch-pkg
+          path: output/*.pkg.tar.zst
+          retention-days: 3
+
+  # Both other editions come from the same package repositories, so all must install side by side.
+  side-by-side:
+    name: Installs beside ${{ matrix.edition }}
+    needs: build-deb
+    # One broken deb target elsewhere must not skip this job; a missing noble deb still fails it.
+    if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [fcitx5-ngosen, ibus-ngosen]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: deb-noble
+          path: debs/
+      - name: Download the newest ${{ matrix.edition }} for Ubuntu 24.04
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EDITION: ${{ matrix.edition }}
+        run: |
+          repo=ngosen/$EDITION
+          [ "$EDITION" = fcitx5-ngosen ] && repo=ngosen/ngosen
+          gh release download --repo "$repo" --pattern "${EDITION}_*_noble_amd64.deb" --dir debs
+          ls debs
+      - name: Install both
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work ubuntu:24.04 bash -euc '
+            apt-get -qq update
+            DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends ./debs/*.deb xvfb xauth x11-utils
+            packaging/check-installed.sh'
+
+  # Lays the packages out as a release would, so a missing or renamed package fails here rather than
+  # at release time.
+  collect:
+    name: Release files
+    needs: [scope, source, build-deb, build-rpm-fedora, build-rpm-opensuse, build-arch]
+    if: needs.scope.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts/
+      - run: packaging/collect-release-files.sh artifacts dist
+      - run: ls -l dist

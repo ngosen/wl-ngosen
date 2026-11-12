@@ -1,0 +1,29 @@
+name: Yêu cầu tính năng
+description: Đề xuất tính năng cho Ngó Sen cho Wayland.
+labels: ['tính năng']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tìm trong [các yêu cầu đã có](https://github.com/ngosen/wl-ngosen/issues?q=label%3A%22t%C3%ADnh+n%C4%83ng%22) trước.
+        Đổi cách gõ chữ (bỏ dấu, tự sửa, Gõ Sen) là việc của lõi chung, gửi ở [kho ngosen](https://github.com/ngosen/ngosen/issues/new/choose).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Bạn muốn làm gì, và đang vướng ở đâu?
+    validations:
+      required: true
+
+  - type: textarea
+    id: wanted
+    attributes:
+      label: Bạn muốn Ngó Sen hoạt động thế nào?
+    validations:
+      required: true
+
+  - type: input
+    id: where
+    attributes:
+      label: App hoặc compositor liên quan
+      placeholder: Firefox, niri, Waybar, ...

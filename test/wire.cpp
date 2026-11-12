@@ -1,0 +1,983 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Ngó Sen contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+// The daemon against a compositor that writes down every request, for the order rules of
+// input-method-v2 and the virtual keyboard that a real compositor punishes with a disconnect.
+#include "compositor/test-bus.h"
+#include "compositor/test-compositor.h"
+
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <string>
+
+namespace fs = std::filesystem;
+using test::TestBus;
+using test::TestCompositor;
+
+namespace {
+
+    int         failures = 0;
+    std::string program;
+    fs::path    root;
+
+    // evdev codes
+    constexpr uint32_t KeyA = 30, KeyS = 31, KeyZ = 44, KeyLeftShift = 42, KeyLeftCtrl = 29, KeyLeftAlt = 56;
+    constexpr uint32_t KeyC = 46, KeyH = 35, KeyO = 24, KeyF = 33, KeySpace = 57;
+    constexpr uint32_t KeyV = 47, KeyI = 23, KeyE = 18, KeyJ = 36, KeyT = 20, KeyN = 49, KeyG = 34, KeyBackspace = 14;
+    constexpr uint32_t PurposePassword = 8, CauseOther = 1;
+    // Modifier bits of the us keymap the test compositor sends.
+    constexpr uint32_t ShiftBit = 1U << 0, CtrlBit = 1U << 2, AltBit = 1U << 3;
+
+    void               check(bool ok, const std::string& what, const TestCompositor* compositor = nullptr) {
+        if (ok)
+            return;
+        ++failures;
+        std::cout << "FAIL " << what << '\n';
+        if (compositor != nullptr)
+            compositor->dump();
+    }
+
+    // A check the shared core still fails, as the fcitx5 edition does on the same compositor. It
+    // fails the run once it passes, so the mark goes when the core is fixed.
+    void knownCoreFailure(bool ok, const std::string& what) {
+        if (ok) {
+            ++failures;
+            std::cout << "FAIL now passes, drop the known-failure mark: " << what << '\n';
+            return;
+        }
+        std::cout << "KNOWN core failure: " << what << '\n';
+    }
+
+    std::string freshHome(const std::string& name) {
+        const fs::path home = root / name;
+        fs::create_directories(home / ".config");
+        return home.string();
+    }
+
+    // Starts the daemon and waits until it has the input method object.
+    enum class Language {
+        English,
+        Vietnamese
+    };
+
+    // Sen is the default; checks written for underlined words ask for Preedit.
+    const std::string PreeditOnly = "DirectTyping=False\n";
+
+    // English unless asked: most checks are about keys reaching the app, which typing Vietnamese changes.
+    bool begin(TestCompositor& compositor, const std::string& name, const std::string& settings = "", Language language = Language::English,
+               const std::vector<std::string>& extraEnv = {}) {
+        const std::string home = freshHome(name);
+        if (language == Language::English) {
+            fs::create_directories(fs::path(home) / ".local/state/ngosen");
+            std::ofstream(fs::path(home) / ".local/state/ngosen/english");
+        }
+        if (!settings.empty()) {
+            fs::create_directories(fs::path(home) / ".config/ngosen");
+            std::ofstream(fs::path(home) / ".config/ngosen/ngosen.conf") << settings;
+        }
+        // Flatpak exports in the test home only, so the host's installed apps cannot rename one.
+        std::vector<std::string> env = {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY, "XDG_DATA_DIRS=" + home + "/flatpak/exports/share"};
+        env.insert(env.end(), extraEnv.begin(), extraEnv.end());
+        compositor.start(program, home, env);
+        return compositor.waitFor([&] { return compositor.hasClient() && compositor.logged("vk.create"); });
+    }
+
+    // Activates a field and waits for the keymap to reach the virtual keyboard.
+    bool focus(TestCompositor& compositor) {
+        compositor.activate();
+        compositor.done();
+        return compositor.waitFor([&] { return compositor.grabbed() && compositor.count("vk.keymap") > 0; });
+    }
+
+    std::size_t indexOf(const TestCompositor& compositor, const std::string& prefix) {
+        const auto& log = compositor.log();
+        for (std::size_t i = 0; i < log.size(); ++i) {
+            if (log[i].rfind(prefix, 0) == 0)
+                return i;
+        }
+        return log.size();
+    }
+
+    bool balanced(const TestCompositor& compositor) {
+        return compositor.count("vk.key ") > 0 && compositor.lines("vk.key ").size() % 2 == 0 &&
+            compositor.count("vk.key " + std::to_string(KeyA) + " 1") == compositor.count("vk.key " + std::to_string(KeyA) + " 0");
+    }
+
+    // Empty commits answer each done and change nothing in the field.
+    bool sendsNoText(const TestCompositor& compositor) {
+        return compositor.count("im.commit_string ") + compositor.count("im.preedit ") + compositor.count("im.delete ") == 0;
+    }
+
+    void testPassthrough() {
+        TestCompositor compositor({});
+        check(begin(compositor, "passthrough"), "the daemon binds the input method and a virtual keyboard", &compositor);
+        check(focus(compositor), "an active field gets the grab and the keymap", &compositor);
+        check(indexOf(compositor, "vk.keymap") < indexOf(compositor, "vk.mods"), "the keymap reaches the virtual keyboard before modifiers", &compositor);
+        compositor.tap(KeyA);
+        compositor.tap(KeyS);
+        check(compositor.barrier(), "keys come back through the virtual keyboard", &compositor);
+        const auto keys = compositor.lines("vk.key ");
+        check(keys.size() >= 4 && keys[0] == "vk.key 30 1" && keys[1] == "vk.key 30 0" && keys[2] == "vk.key 31 1" && keys[3] == "vk.key 31 0", "keys pass in the order they came",
+              &compositor);
+        check(sendsNoText(compositor), "plain passthrough sends nothing to the field", &compositor);
+        compositor.stop();
+        check(!compositor.logged("error: a second grab while one is held"), "one grab at a time", &compositor);
+    }
+
+    void testModifiersMirrored() {
+        TestCompositor compositor({});
+        check(begin(compositor, "modifiers") && focus(compositor), "setup for modifiers", &compositor);
+        compositor.key(KeyLeftShift, true);
+        compositor.modifiers(1, 0, 0, 0);
+        compositor.tap(KeyA);
+        compositor.modifiers(0, 0, 0, 0);
+        compositor.key(KeyLeftShift, false);
+        check(compositor.barrier(), "barrier after shift", &compositor);
+        check(compositor.logged("vk.mods 1 0 0 0"), "the shift state reaches the virtual keyboard", &compositor);
+        check(indexOf(compositor, "vk.mods 1 0 0 0") < indexOf(compositor, "vk.key 30 1"), "shift is down before the key it changes", &compositor);
+        compositor.stop();
+    }
+
+    void testFocusSequences() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "activate-twice"), "setup for activate twice", &compositor);
+            compositor.activate();
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "activate;activate;done grabs", &compositor);
+            check(compositor.barrier(), "barrier after activate twice", &compositor);
+            check(compositor.count("grab.take") - compositor.count("grab.release") == 1, "activate;activate;done holds one grab", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "activate-deactivate") && focus(compositor), "setup for activate;deactivate", &compositor);
+            compositor.clearLog();
+            compositor.activate();
+            compositor.deactivate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.logged("grab.release"); }), "activate;deactivate;done releases the grab", &compositor);
+            compositor.run(100);
+            check(!compositor.grabbed(), "no grab is held after activate;deactivate;done", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "deactivate-activate") && focus(compositor), "setup for deactivate;activate", &compositor);
+            compositor.clearLog();
+            compositor.deactivate();
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.logged("grab.release") && compositor.logged("grab.take"); }),
+                  "deactivate;activate;done gives the new field a grab of its own", &compositor);
+            check(indexOf(compositor, "grab.release") < indexOf(compositor, "grab.take"), "the old grab goes before the new one", &compositor);
+            check(compositor.barrier(), "keys pass in the new field", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void testReleaseOnDeactivate() {
+        TestCompositor compositor({});
+        check(begin(compositor, "release") && focus(compositor), "setup for release on deactivate", &compositor);
+        compositor.key(KeyA, true);
+        check(compositor.waitFor([&] { return compositor.logged("vk.key 30 1"); }), "the press passes", &compositor);
+        compositor.deactivate();
+        compositor.done();
+        check(compositor.waitFor([&] { return compositor.logged("vk.key 30 0"); }), "a key held when the field goes away is let go", &compositor);
+        check(indexOf(compositor, "vk.key 30 0") < indexOf(compositor, "grab.release"), "the key is let go before the grab", &compositor);
+        compositor.run(100);
+        const std::size_t before = compositor.count("vk.key ");
+        compositor.key(KeyA, false); // the grab is gone; a real compositor sends nothing more
+        compositor.run(100);
+        check(compositor.count("vk.key ") == before, "nothing is typed after deactivate", &compositor);
+        compositor.stop();
+    }
+
+    void testKeymaps() {
+        {
+            TestCompositor::Options options;
+            options.keymapOnGrab = false;
+            TestCompositor compositor(options);
+            check(begin(compositor, "no-keymap"), "setup for keys before a keymap", &compositor);
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "the grab comes without a keymap", &compositor);
+            compositor.tap(KeyA);
+            compositor.sendEmptyKeymap();
+            compositor.tap(KeyA);
+            compositor.run(200);
+            check(compositor.count("vk.key ") == 0 && compositor.count("vk.mods") == 0, "no key or modifiers before the virtual keyboard has a keymap", &compositor);
+            compositor.sendKeymap("us");
+            check(compositor.barrier(), "a real keymap after an empty one starts the typing", &compositor);
+            check(indexOf(compositor, "vk.keymap") < indexOf(compositor, "vk.key "), "the keymap comes first", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "keymap-change") && focus(compositor), "setup for a keymap change", &compositor);
+            compositor.sendKeymap("fr");
+            check(compositor.barrier(), "keys pass after a keymap change", &compositor);
+            check(compositor.count("vk.keymap") == 2, "the new keymap reaches the virtual keyboard", &compositor);
+            compositor.sendKeymap("fr");
+            compositor.barrier();
+            check(compositor.count("vk.keymap") == 2, "the same keymap again is not sent again", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void testReviewCases() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "keymap-size") && focus(compositor), "setup for the keymap size", &compositor);
+            check(compositor.count("error:") == 0, "the virtual keyboard's keymap file is as long as its size says", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor::Options options;
+            options.keymapOnGrab = false;
+            TestCompositor compositor(options);
+            check(begin(compositor, "broken-keymap-first"), "setup for a broken first keymap", &compositor);
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "the grab comes before the broken keymap", &compositor);
+            compositor.sendBrokenKeymap();
+            // Holding the grab with no keymap to type with would swallow every key.
+            check(compositor.waitExit(3000) == 1, "a keymap the daemon cannot read ends it with status 1", &compositor);
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "keys-behind-deactivate") && focus(compositor), "setup for keys behind a deactivate", &compositor);
+            compositor.clearLog();
+            compositor.deactivate();
+            compositor.done(false);
+            compositor.key(KeyA, true, false);
+            compositor.run(0);
+            check(compositor.waitFor([&] { return compositor.logged("grab.release"); }), "the grab goes with the field", &compositor);
+            compositor.run(100);
+            check(compositor.count("vk.key ") == 0, "a key read with the deactivate is not typed after the grab is gone", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "mods-on-deactivate") && focus(compositor), "setup for modifiers on deactivate", &compositor);
+            compositor.key(KeyLeftShift, true);
+            compositor.modifiers(1, 0, 2, 0);
+            check(compositor.waitFor([&] { return compositor.logged("vk.mods 1 0 2 0"); }), "shift and caps lock reach the virtual keyboard", &compositor);
+            compositor.deactivate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.logged("grab.release"); }), "the grab goes with the field", &compositor);
+            const auto mods = compositor.lines("vk.mods ");
+            check(!mods.empty() && mods.back() == "vk.mods 0 0 2 0", "shift is let go on deactivate, caps lock stays", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            compositor.start(program, freshHome("no-compositor"), {"WAYLAND_DISPLAY=wl-ngosen-missing"});
+            check(compositor.waitExit(3000) == 1, "no compositor to connect to ends the daemon with status 1", &compositor);
+        }
+    }
+
+    bool englishMark(const std::string& name) {
+        return fs::exists(root / name / ".local/state/ngosen/english");
+    }
+
+    // Ctrl+Shift as a compositor sends it: each key, then the modifiers it leaves.
+    void tapCtrlShift(TestCompositor& compositor) {
+        compositor.key(KeyLeftCtrl, true);
+        compositor.modifiers(CtrlBit, 0, 0, 0);
+        compositor.key(KeyLeftShift, true);
+        compositor.modifiers(CtrlBit | ShiftBit, 0, 0, 0);
+        compositor.key(KeyLeftShift, false);
+        compositor.modifiers(CtrlBit, 0, 0, 0);
+        compositor.key(KeyLeftCtrl, false);
+        compositor.modifiers(0, 0, 0, 0);
+    }
+
+    void testToggleKey() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "toggle", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for the toggle key", &compositor);
+            check(!englishMark("toggle"), "a new user starts in Vietnamese");
+            tapCtrlShift(compositor);
+            check(compositor.barrier(), "barrier after Ctrl+Shift", &compositor);
+            check(englishMark("toggle"), "a tap of Ctrl+Shift switches to English, shared with the IBus edition", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyLeftShift) + " ") == 2 && compositor.count("vk.key " + std::to_string(KeyLeftCtrl) + " ") == 2,
+                  "the app sees Ctrl and Shift, as with fcitx5", &compositor);
+            tapCtrlShift(compositor);
+            check(compositor.barrier(), "barrier after the second Ctrl+Shift", &compositor);
+            check(!englishMark("toggle"), "a second tap switches back to Vietnamese", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "toggle-letter", PreeditOnly + "ToggleKey=Alt+z\n", Language::Vietnamese) && focus(compositor), "setup for Alt+Z", &compositor);
+            compositor.key(KeyLeftAlt, true);
+            compositor.modifiers(AltBit, 0, 0, 0);
+            compositor.tap(KeyZ);
+            compositor.key(KeyLeftAlt, false);
+            compositor.modifiers(0, 0, 0, 0);
+            check(compositor.barrier(), "barrier after Alt+Z", &compositor);
+            check(englishMark("toggle-letter"), "Alt+Z switches to English", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyZ) + " ") == 0, "the app sees neither the press nor the release of Z", &compositor);
+            check(balanced(compositor), "every key the app saw is let go", &compositor);
+            compositor.tap(KeyZ);
+            check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyZ) + " ") == 2, "a plain z still types", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void type(TestCompositor& compositor, std::initializer_list<uint32_t> keys, bool send = true) {
+        for (uint32_t key : keys)
+            compositor.tap(key, send);
+    }
+
+    // Each commit must name the latest done, or the compositor drops it as stale.
+    bool serialsCurrent(const TestCompositor& compositor) {
+        const auto commits = compositor.lines("im.commit ");
+        for (const auto& line : commits) {
+            if (line != "im.commit " + std::to_string(compositor.dones()))
+                return false;
+        }
+        return !commits.empty();
+    }
+
+    void testPreedit() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for preedit", &compositor);
+            compositor.clearLog();
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(compositor.barrier(), "barrier after a word", &compositor);
+            const auto preedits = compositor.lines("im.preedit ");
+            // The protocol counts the cursor in bytes: "chào" is five.
+            check(!preedits.empty() && preedits.back() == "im.preedit chào 5 5", "the word shows as underlined text while typing", &compositor);
+            check(compositor.count("im.commit_string chào ") == 1, "space commits the word with the space", &compositor);
+            check(compositor.lines("vk.key ").size() == 2 /* the barrier */, "the app gets no key for letters that went into the word", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeySpace) + " ") == 0, "the app gets no space key on top", &compositor);
+            const std::size_t at = indexOf(compositor, "im.commit_string");
+            check(at + 1 < compositor.log().size() && compositor.log()[at + 1].rfind("im.commit ", 0) == 0, "the commit carries no preedit, which clears it", &compositor);
+            check(serialsCurrent(compositor), "every commit names the latest done", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-focus", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for focus loss", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO});
+            // Not barrier(): its key would end the word.
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit chao 4 4"); }), "a half word shows", &compositor);
+            compositor.clearLog();
+            compositor.deactivate();
+            compositor.done();
+            compositor.run(200);
+            check(compositor.count("im.commit") == 0, "nothing goes to a field that lost focus", &compositor);
+            compositor.activate();
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "a new field gets the grab", &compositor);
+            type(compositor, {KeyA});
+            check(compositor.barrier(), "barrier in the new field", &compositor);
+            const auto preedits = compositor.lines("im.preedit ");
+            check(preedits.size() == 1 && preedits[0] == "im.preedit a 1 1", "the new field starts with an empty word", &compositor);
+            check(compositor.count("im.commit_string chao") == 0, "nothing of the old word reaches the new field", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-stale", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a stale batch", &compositor);
+            compositor.clearLog();
+            // Keys and the focus change arrive in one read: the keys belong to the field that is gone.
+            type(compositor, {KeyC, KeyH, KeyA}, false);
+            compositor.deactivate();
+            compositor.done();
+            compositor.run(300);
+            check(compositor.count("im.") == 0, "keys read with a focus change send nothing to either field", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-serial", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a done behind a key", &compositor);
+            compositor.clearLog();
+            // The done is read with the key, so the commit for the key must already name it.
+            type(compositor, {KeyA}, false);
+            compositor.surrounding("x", 1, 1);
+            compositor.done();
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit a 1 1"); }), "the key shows", &compositor);
+            check(serialsCurrent(compositor), "a commit names a done read in the same batch", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-password", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a password", &compositor);
+            compositor.contentType(0, PurposePassword);
+            compositor.done();
+            compositor.clearLog();
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF});
+            check(compositor.barrier(), "barrier in a password field", &compositor);
+            check(sendsNoText(compositor), "a password field gets no preedit", &compositor);
+            const auto keys = compositor.lines("vk.key ");
+            check(keys.size() >= 10 && keys[0] == "vk.key 46 1" && keys[8] == "vk.key 33 1", "a password field gets the keys as typed", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "preedit-cause", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for an app change", &compositor);
+            compositor.surrounding("xyz", 3, 3);
+            compositor.done();
+            type(compositor, {KeyC, KeyH, KeyA});
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit cha 3 3"); }), "a half word shows", &compositor);
+            compositor.clearLog();
+            // A click moves the cursor in unchanged text, and the app says it made the change.
+            compositor.surrounding("xyz", 0, 0);
+            compositor.cause(CauseOther);
+            compositor.done();
+            type(compositor, {KeyF, KeySpace});
+            check(compositor.barrier(), "barrier after the click", &compositor);
+            // As with fcitx5's input-method-v2 frontend: the underlined word moves with the cursor and goes on there.
+            check(compositor.count("im.commit_string chà ") == 1 && !compositor.logged("im.commit_string cha"), "a click leaves the underlined word to the core, as fcitx5 does",
+                  &compositor);
+            check(serialsCurrent(compositor), "commits after the click name its done", &compositor);
+            compositor.stop();
+        }
+    }
+
+    // Presses and releases of one key alternate, starting with a press and ending with a release.
+    bool alternates(const TestCompositor& compositor, uint32_t code) {
+        const auto lines = compositor.lines("vk.key " + std::to_string(code) + " ");
+        for (std::size_t i = 0; i < lines.size(); ++i) {
+            if (lines[i] != "vk.key " + std::to_string(code) + (i % 2 == 0 ? " 1" : " 0"))
+                return false;
+        }
+        return !lines.empty() && lines.size() % 2 == 0;
+    }
+
+    // Sen types straight into the field: the app's own text, as the field model applies what the
+    // daemon sends, is what counts.
+    bool fieldShows(TestCompositor& compositor, const std::string& text) {
+        return compositor.waitFor([&] { return compositor.fieldText() == text && compositor.fieldPreedit().empty(); }, 3000);
+    }
+
+    void testSen() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen", "", Language::Vietnamese), "setup for Sen", &compositor);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "a field that reports its text gets the grab", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            // The core deletes the first word of an empty field with BackSpace keys.
+            check(fieldShows(compositor, "chào "), "Sen types the word into the field", &compositor);
+            check(compositor.count("im.preedit ") == 0, "nothing is underlined in a field that reports its text", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-bytes", "", Language::Vietnamese), "setup for Sen with marks", &compositor);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for Sen with marks", &compositor);
+            type(compositor, {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace});
+            // ệ is three bytes and replaces ê, two: a count in characters would cut into "Xin".
+            check(fieldShows(compositor, "Xin việt "), "deletes count bytes, so text before the word stays", &compositor);
+            check(compositor.count("im.delete ") > 0, "a field that shows the word is edited through surrounding text", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-after-commit", "", Language::Vietnamese), "setup for a field that reports after a commit", &compositor);
+            compositor.setReportsOnCommit(true);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a field that reports after a commit", &compositor);
+            // At a person's pace, so each report can come back before the next key.
+            for (uint32_t key : {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace}) {
+                compositor.tap(key);
+                compositor.runFor(30);
+            }
+            check(fieldShows(compositor, "Xin việt "), "a field that reports after a commit gets the word", &compositor);
+            check(compositor.count("im.delete ") > 0, "a field that reports after a commit is edited through surrounding text", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyBackspace) + " ") == 0, "no BackSpace goes to a field that reports after a commit", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-old-copy", "", Language::Vietnamese), "setup for Firefox in Sen", &compositor);
+            compositor.setOldCopyAfterEdit(true);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("Xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for Firefox in Sen", &compositor);
+            for (uint32_t key : {KeyV, KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace}) {
+                compositor.tap(key);
+                compositor.runFor(30);
+            }
+            check(fieldShows(compositor, "Xin việt "), "Firefox gets the word", &compositor);
+            check(compositor.logged("im.commit_string "), "the core asks Firefox for a report with an empty commit", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyBackspace) + " ") == 0, "no BackSpace goes to Firefox after an edit", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-capital", "", Language::Vietnamese), "setup for a capital in Sen", &compositor);
+            compositor.openField("", false);
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a capital in Sen", &compositor);
+            type(compositor, {KeyT, KeyI, KeyE, KeyE, KeyS, KeyN, KeyG, KeySpace});
+            compositor.key(KeyLeftShift, true);
+            compositor.modifiers(1, 0, 0, 0);
+            compositor.tap(KeyV);
+            compositor.modifiers(0, 0, 0, 0);
+            compositor.key(KeyLeftShift, false);
+            type(compositor, {KeyI, KeyE, KeyE, KeyJ, KeyT, KeySpace});
+            check(fieldShows(compositor, "tiếng Việt "), "a capital keeps the word", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-no-text", "", Language::Vietnamese), "setup for Sen without surrounding text", &compositor);
+            compositor.openField("", false);
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a field without surrounding text", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào "), "a field that does not report its text still gets the word", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-slow", "", Language::Vietnamese), "setup for a slow app", &compositor);
+            compositor.setReplyDelay(60);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a slow app", &compositor);
+            type(compositor, {KeyT, KeyI, KeyE, KeyE, KeyS, KeyN, KeyG, KeySpace});
+            check(fieldShows(compositor, "tiếng "), "an app that reports late still ends with the word", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-click", "", Language::Vietnamese), "setup for a click in Sen", &compositor);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a click in Sen", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA});
+            check(compositor.waitFor([&] { return compositor.fieldText() == "cha"; }), "the start of a word is in the field", &compositor);
+            // A click before the word: the next keys should start a word there and leave "cha" alone.
+            // The core takes them as the rest of "cha" and gives "ào cha", as fcitx5 on Sway does.
+            compositor.moveCursor(0);
+            compositor.runFor(50);
+            type(compositor, {KeyO, KeyF, KeySpace});
+            // The second BackSpace finds nothing to delete, so no report comes and the core waits it out.
+            compositor.waitFor([&] { return compositor.fieldText() == "ào cha" || compositor.fieldText() == "ò cha"; }, 3000);
+            knownCoreFailure(compositor.fieldText() == "ò cha", "after a click the tone goes on the new word, not the old one");
+            check(compositor.fieldText() == "ào cha", "after a click Sen does what the fcitx5 edition does", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void writeConfig(const std::string& name, const std::string& file, const std::string& text) {
+        const fs::path dir = fs::path(freshHome(name)) / ".config/ngosen";
+        fs::create_directories(dir);
+        std::ofstream(dir / file) << text;
+    }
+
+    std::string readConfig(const std::string& name, const std::string& file) {
+        std::ifstream      in(root / name / ".config/ngosen" / file);
+        std::ostringstream text;
+        text << in.rdbuf();
+        return text.str();
+    }
+
+    // A new field in the window that is now focused.
+    bool nextField(TestCompositor& compositor, const std::string& appId) {
+        const std::size_t grabs = compositor.count("grab.take");
+        compositor.deactivate();
+        compositor.done();
+        compositor.activateToplevel(appId);
+        compositor.openField("");
+        return compositor.waitFor([&] { return compositor.count("grab.take") > grabs && compositor.grabbed(); });
+    }
+
+    void testAppModes() {
+        {
+            TestCompositor compositor({});
+            writeConfig("app-mode", "ngosen-app-rules.conf", "firefox=5\n");
+            check(begin(compositor, "app-mode", "", Language::Vietnamese), "setup for a mode picked for an app", &compositor);
+            compositor.openToplevel("kate", false);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a mode picked for an app", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào "), "the app picked for Preedit gets the word", &compositor);
+            check(compositor.count("im.preedit c") > 0, "the mode picked for the app wins over the shared Sen", &compositor);
+            const std::size_t before = compositor.count("im.preedit c");
+            check(nextField(compositor, "kate"), "a new field in kate", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào ") && compositor.count("im.preedit c") == before, "an app with no mode follows the shared Sen", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "app-switch", "", Language::Vietnamese), "setup for the toggle key per app", &compositor);
+            compositor.openToplevel("gedit", false);
+            compositor.openToplevel("kate", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for the toggle key per app", &compositor);
+            tapCtrlShift(compositor);
+            check(compositor.barrier(), "barrier after the toggle in kate", &compositor);
+            check(readConfig("app-switch", "ngosen-app-switch.conf").find("App=kate") != std::string::npos, "the toggle is saved for the app, in the fcitx5 file", &compositor);
+            check(nextField(compositor, "gedit"), "a new field in gedit", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "aa "), "an app the toggle never switched follows the last switch", &compositor);
+            tapCtrlShift(compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "aa â "), "the toggle switches this app back to Vietnamese", &compositor);
+            check(nextField(compositor, "kate"), "kate again", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "aa "), "the app switched to English stays in English", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            writeConfig("app-flatpak", "ngosen-app-rules.conf", "firefox=5\n");
+            const fs::path exports = root / "app-flatpak/flatpak/exports/share/applications";
+            fs::create_directories(exports);
+            std::ofstream(exports / "org.mozilla.firefox.desktop") << "[Desktop Entry]\nName=Firefox\nStartupWMClass=firefox\n";
+            check(begin(compositor, "app-flatpak", "", Language::Vietnamese), "setup for a Flatpak app", &compositor);
+            compositor.openToplevel("org.mozilla.firefox", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a Flatpak app", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào ") && compositor.count("im.preedit c") > 0, "a Flatpak app keeps the mode picked for it by its usual name", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            writeConfig("app-close", "ngosen-app-rules.conf", "firefox=5\nkate=0\n");
+            check(begin(compositor, "app-close", "", Language::Vietnamese), "setup for a window that changes and closes", &compositor);
+            compositor.openToplevel("kate", false);
+            compositor.openToplevel("firefox", true);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a window that changes and closes", &compositor);
+            type(compositor, {KeyC, KeyH, KeyA});
+            // The window changes while the word is in the preedit, not before its keys are read.
+            check(compositor.waitFor([&] { return compositor.logged("im.preedit cha 3 3"); }), "the word is in the preedit", &compositor);
+            compositor.activateToplevel("kate");
+            type(compositor, {KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào "), "a new app in the middle of a word leaves the word whole", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "chào aa "), "after the word the app's Off mode types English", &compositor);
+            compositor.closeToplevel("kate");
+            compositor.deactivate();
+            compositor.done();
+            const std::size_t grabs = compositor.count("grab.take");
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.count("grab.take") > grabs && compositor.grabbed(); }), "a field with no window", &compositor);
+            type(compositor, {KeyA, KeyA, KeySpace});
+            check(fieldShows(compositor, "â "), "once the window closed, the shared mode applies", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            writeConfig("app-late", "ngosen-app-rules.conf", "firefox=5\n");
+            check(begin(compositor, "app-late", "", Language::Vietnamese), "setup for a window activated after its field", &compositor);
+            compositor.openToplevel("kate", true);
+            compositor.openToplevel("firefox", false);
+            compositor.openField("");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for a window activated after its field", &compositor);
+            compositor.activateToplevel("firefox");
+            type(compositor, {KeyC, KeyH, KeyA, KeyO, KeyF, KeySpace});
+            check(fieldShows(compositor, "chào ") && compositor.count("im.preedit c") > 0, "the first key sees the app activated after the field", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void testRepeat() {
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "repeat") && focus(compositor), "setup for repeat", &compositor);
+            // Fast, so the test is short: a repeat every 10 ms after 50 ms.
+            compositor.repeatInfo(100, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(300);
+            compositor.key(KeyA, false);
+            // No other key yet: a new press would end the repeat by itself.
+            compositor.runFor(50);
+            const std::size_t atRelease = compositor.count("vk.key " + std::to_string(KeyA) + " ");
+            compositor.runFor(200);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " ") == atRelease, "repeat stops when the key is let go", &compositor);
+            check(compositor.barrier(), "barrier after a held key", &compositor);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " 1") >= 5, "a held key repeats", &compositor);
+            check(alternates(compositor, KeyA), "each repeat is a release then a press, and the last is let go", &compositor);
+
+            compositor.clearLog();
+            compositor.key(KeyLeftShift, true);
+            compositor.runFor(200);
+            compositor.key(KeyLeftShift, false);
+            check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyLeftShift) + " 1") == 1, "modifiers do not repeat", &compositor);
+
+            compositor.repeatInfo(0, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(200);
+            compositor.key(KeyA, false);
+            check(compositor.barrier() && compositor.count("vk.key " + std::to_string(KeyA) + " 1") == 1, "rate 0 turns repeat off", &compositor);
+
+            compositor.repeatInfo(100, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(150);
+            compositor.deactivate();
+            compositor.done();
+            compositor.runFor(50);
+            const std::size_t atFocusLoss = compositor.count("vk.key " + std::to_string(KeyA) + " ");
+            compositor.runFor(200);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " ") == atFocusLoss && alternates(compositor, KeyA),
+                  "repeat stops when the field loses focus, with the key let go", &compositor);
+            compositor.key(KeyA, false);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "repeat-word", PreeditOnly, Language::Vietnamese) && focus(compositor), "setup for a held letter", &compositor);
+            compositor.repeatInfo(100, 50);
+            compositor.clearLog();
+            compositor.key(KeyA, true);
+            compositor.runFor(300);
+            compositor.key(KeyA, false);
+            check(compositor.waitFor([&] { return compositor.lines("im.preedit ").size() >= 3; }), "a held letter repeats into the word", &compositor);
+            compositor.runFor(50);
+            check(compositor.count("vk.key " + std::to_string(KeyA) + " ") == 0, "the app gets no key for repeats the core took", &compositor);
+            compositor.stop();
+        }
+    }
+
+    void testExits() {
+        {
+            TestCompositor::Options options;
+            options.inputMethod = false;
+            TestCompositor compositor(options);
+            compositor.start(program, freshHome("no-im"));
+            check(compositor.waitExit(3000) == 0, "a compositor without input-method-v2 ends the daemon quietly", &compositor);
+        }
+        {
+            TestCompositor::Options options;
+            options.virtualKeyboard = false;
+            TestCompositor compositor(options);
+            compositor.start(program, freshHome("no-vk"));
+            check(compositor.waitExit(3000) == 0, "a compositor without a virtual keyboard ends the daemon quietly", &compositor);
+            check(compositor.count("grab.take") == 0, "and it never grabs the keyboard", &compositor);
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "unavailable") && focus(compositor), "setup for unavailable", &compositor);
+            compositor.unavailable();
+            check(compositor.waitExit(3000) == 1, "unavailable ends the daemon with status 1", &compositor);
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "global-removed") && focus(compositor), "setup for a removed global", &compositor);
+            compositor.removeInputMethodGlobal();
+            check(compositor.waitExit(3000) == 1, "losing the input method global ends the daemon with status 1", &compositor);
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "signal") && focus(compositor), "setup for SIGTERM", &compositor);
+            compositor.key(KeyA, true);
+            check(compositor.waitFor([&] { return compositor.logged("vk.key 30 1"); }), "the press passes before SIGTERM", &compositor);
+            // The daemon's last requests must still arrive when the compositor reads them late.
+            compositor.stopWhileBusy(300);
+            check(compositor.logged("vk.key 30 0"), "a held key is let go when the daemon stops", &compositor);
+            check(balanced(compositor), "every press has its release", &compositor);
+        }
+    }
+
+    // Menu labels in English, whatever catalog the machine has installed.
+    const std::string TrayEnglish = PreeditOnly + "UiLanguage=English\n";
+
+    bool              fileHas(const std::string& name, const std::string& file, const std::string& text) {
+        return readConfig(name, file).find(text) != std::string::npos;
+    }
+
+    void testTrayIcon(TestBus& bus, std::vector<std::string> env) {
+        TestCompositor    compositor({});
+        const std::size_t before = bus.registered().size();
+        env.push_back("LANGUAGE=en_GB:en");
+        check(begin(compositor, "tray", TrayEnglish, Language::Vietnamese, env) && focus(compositor), "setup for the tray", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return bus.registered().size() > before;
+        }),
+              "the tray icon registers with the bar's watcher", &compositor);
+        const std::string item = bus.registered().back();
+        check(bus.iconName(item) == "wl-ngosen", "the icon shows Vietnamese", &compositor);
+        check(bus.toggleState(item, "Vietnamese") == 1, "the menu checks Vietnamese", &compositor);
+        bus.activate(item);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return englishMark("tray");
+        }),
+              "a click on the icon switches to English, shared with the IBus edition", &compositor);
+        check(bus.iconName(item) == "wl-ngosen-off", "the icon shows English", &compositor);
+        check(bus.toggleState(item, "Vietnamese") == 0, "the menu unchecks Vietnamese", &compositor);
+        bus.click(item, bus.menuId(item, "Spell Check"));
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return fileHas("tray", "ngosen.conf", "SpellCheck=False") && bus.toggleState(item, "Spell Check") == 0;
+        }),
+              "a click on Spell Check saves it and the menu shows what was saved", &compositor);
+        tapCtrlShift(compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return !bus.notices().empty() && bus.notices().back() == "Vietnamese";
+        }),
+              "the toggle key shows the new language in a notification", &compositor);
+        check(bus.iconName(item) == "wl-ngosen", "the icon follows the toggle key", &compositor);
+        bus.click(item, bus.menuId(item, "Settings"));
+        check(compositor.waitFor([&] { return fs::exists(root / "settings-window.ran"); }), "Settings in the menu starts the settings window", &compositor);
+        std::string language;
+        std::getline(std::ifstream(root / "settings-window.ran"), language);
+        check(language == "en_GB:en", "the settings window gets the desktop's language, not the menu's", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayModes(TestBus& bus, const std::vector<std::string>& env) {
+        TestCompositor    compositor({});
+        const std::size_t before = bus.registered().size();
+        check(begin(compositor, "tray-app", TrayEnglish, Language::Vietnamese, env), "setup for a mode picked in the tray", &compositor);
+        compositor.openToplevel("firefox", true);
+        check(focus(compositor), "focus for a mode picked in the tray", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return bus.registered().size() > before && bus.menuId(bus.registered().back(), "Typing mode for firefox") > 0;
+        }),
+              "the menu names the app in use", &compositor);
+        const std::string item = bus.registered().back();
+        check(bus.toggleState(item, "Preedit") == 1, "the menu checks the mode the app types in", &compositor);
+        const int updates = bus.layoutUpdates();
+        // Another program writes a file the menu does not show.
+        std::ofstream(root / "tray-app" / ".config/ngosen/ngosen-macro-table.conf") << "vn:Việt Nam\n";
+        compositor.runFor(1500);
+        bus.pump();
+        check(bus.layoutUpdates() == updates, "a file change that leaves the menu as it was does not redraw an open menu", &compositor);
+        // The shared mode is Preedit, so Sen is kept for the app.
+        bus.click(item, bus.menuId(item, "Sen"));
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return fileHas("tray-app", "ngosen-app-rules.conf", "firefox=2") && bus.toggleState(item, "Sen") == 1;
+        }),
+              "a mode picked in the menu is kept for the app, in the IBus edition's file", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayLateWatcher(const std::vector<std::string>& extra) {
+        TestBus bus;
+        check(bus.up(), "a second private bus");
+        if (!bus.up())
+            return;
+        std::vector<std::string> env = extra;
+        env.push_back("DBUS_SESSION_BUS_ADDRESS=" + bus.address());
+        TestCompositor compositor({});
+        check(begin(compositor, "tray-late", TrayEnglish, Language::Vietnamese, env) && focus(compositor), "setup for a bar started later", &compositor);
+        compositor.runFor(100);
+        bus.startWatcher();
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return !bus.registered().empty();
+        }),
+              "the icon registers with a bar started after the daemon", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayVietnamese(TestBus& bus, const std::vector<std::string>& env) {
+        TestCompositor           compositor({});
+        const std::size_t        before     = bus.registered().size();
+        std::vector<std::string> vietnamese = env;
+        // An English desktop; gettext ignores LANGUAGE in the C and C.UTF-8 locales.
+        vietnamese.push_back("LC_ALL=en_US.UTF-8");
+        vietnamese.push_back(std::string("NGOSEN_WL_LOCALEDIR=") + TEST_LOCALEDIR);
+        check(begin(compositor, "tray-vi", PreeditOnly, Language::Vietnamese, vietnamese) && focus(compositor), "setup for a Vietnamese menu", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return bus.registered().size() > before;
+        }),
+              "the tray registers for a Vietnamese menu", &compositor);
+        const std::string item = bus.registered().back();
+        check(bus.toggleState(item, "Tiếng Việt") == 1, "the menu is in Vietnamese whatever the desktop language", &compositor);
+        check(bus.menuId(item, "Gõ Sen") > 0, "mode names are the IBus edition's", &compositor);
+        compositor.stop();
+    }
+
+    void testTrayBusGone() {
+        TestBus bus;
+        check(bus.up(), "a bus to take away");
+        if (!bus.up())
+            return;
+        bus.startWatcher();
+        TestCompositor compositor({});
+        check(begin(compositor, "tray-gone", TrayEnglish, Language::Vietnamese, {"DBUS_SESSION_BUS_ADDRESS=" + bus.address()}) && focus(compositor),
+              "setup for a bus that goes away", &compositor);
+        check(compositor.waitFor([&] {
+            bus.pump();
+            return !bus.registered().empty();
+        }),
+              "the icon registers before the bus goes away", &compositor);
+        bus.down();
+        // A crash here would stop typing in every app.
+        check(compositor.waitExit(500) == -1, "the daemon keeps running when the session bus goes away", &compositor);
+        compositor.stop();
+    }
+
+    // Stands in for wl-ngosen-settings and writes down the language it was started with.
+    std::string fakeSettingsWindow() {
+        const fs::path script = root / "settings-window";
+        std::ofstream(script) << "#!/bin/sh\nprintf '%s' \"${LANGUAGE-unset}\" > \"$0.tmp\" && mv \"$0.tmp\" \"$0.ran\"\n";
+        fs::permissions(script, fs::perms::owner_all);
+        return script.string();
+    }
+
+    void testTray() {
+        TestBus bus;
+        check(bus.up(), "a private session bus for the tray");
+        if (!bus.up())
+            return;
+        bus.startWatcher();
+        const std::vector<std::string> env = {"DBUS_SESSION_BUS_ADDRESS=" + bus.address(), "NGOSEN_WL_SETTINGS=" + fakeSettingsWindow()};
+        testTrayIcon(bus, env);
+        testTrayModes(bus, env);
+        testTrayVietnamese(bus, env);
+        testTrayLateWatcher({});
+        testTrayBusGone();
+    }
+
+} // namespace
+
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::cerr << "usage: wire-test <wl-ngosen>\n";
+        return 2;
+    }
+    program               = argv[1];
+    char        pattern[] = "/tmp/wl-ngosen-wire-XXXXXX";
+    const char* dir       = mkdtemp(pattern);
+    if (dir == nullptr)
+        return 2;
+    root = dir;
+    testPassthrough();
+    testModifiersMirrored();
+    testFocusSequences();
+    testReleaseOnDeactivate();
+    testKeymaps();
+    testExits();
+    testReviewCases();
+    testToggleKey();
+    testPreedit();
+    testSen();
+    testAppModes();
+    testRepeat();
+    testTray();
+    // A failed run keeps each daemon's home, with its log.
+    if (failures == 0) {
+        fs::remove_all(root);
+        std::cout << "all wire checks passed\n";
+    } else {
+        std::cout << "daemon logs kept in " << root.string() << '\n';
+    }
+    return failures == 0 ? 0 : 1;
+}

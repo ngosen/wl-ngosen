@@ -1,0 +1,38 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hỏi về cách cài hoặc dùng Ngó Sen cho Wayland ở đây.
+        Nếu Ngó Sen gõ sai chữ hoặc treo, mở issue bằng form [Báo lỗi](https://github.com/ngosen/wl-ngosen/issues/new/choose).
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Bạn muốn làm gì?
+      description: Ghi việc bạn muốn làm và những cách đã thử.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version wl-ngosen
+      placeholder: 0.1.0-1
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distro
+      description: Ghi tên và version distro.
+
+  - type: dropdown
+    id: desktop_env
+    attributes:
+      label: Compositor
+      options:
+        - niri
+        - Sway
+        - Hyprland
+        - labwc
+        - MangoWC
+        - Khác

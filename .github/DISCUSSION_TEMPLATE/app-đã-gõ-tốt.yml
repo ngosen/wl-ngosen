@@ -1,0 +1,60 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ghi app gõ tốt với Ngó Sen cho Wayland và hệ thống bạn đang dùng để bổ sung vào danh sách tương thích.
+        Nếu gặp lỗi, mở [issue](https://github.com/ngosen/wl-ngosen/issues/new/choose).
+
+  - type: input
+    id: app
+    attributes:
+      label: App gõ tốt
+      description: Ghi tên app và cách cài (Flatpak, Snap, gói của distro, AppImage). Nếu là trang web, ghi trình duyệt và trang web.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Cách gõ
+      options:
+        - Gõ Sen (mặc định)
+        - Gạch chân
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version wl-ngosen
+      placeholder: 0.1.0-1
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distro
+      description: Ghi tên và version distro.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: desktop_env
+    attributes:
+      label: Compositor
+      options:
+        - niri
+        - Sway
+        - Hyprland
+        - labwc
+        - MangoWC
+        - Khác
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Ghi chú
+      description: Bạn đã gõ gì, đổi cài đặt nào hoặc có điều gì cần biết khi dùng app này?
