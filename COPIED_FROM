@@ -1,0 +1,49 @@
+# Files copied from https://github.com/ngosen/ibus-ngosen at this commit. The weekly "Copied code"
+# workflow compares them with ibus-ngosen next; bring a change over and move the commit forward.
+commit 67dc708e66cbd20a6b0838bdb735045f30c8d96e
+
+# copied file (in ibus-ngosen)           here
+src/ngosen-ibus-app-modes.h              src/shared/ngosen-ibus-app-modes.h
+src/ngosen-ibus-app-modes.cpp            src/shared/ngosen-ibus-app-modes.cpp
+src/ngosen-ibus-config.h                 src/shared/ngosen-ibus-config.h
+src/ngosen-ibus-config.cpp               src/shared/ngosen-ibus-config.cpp
+src/ngosen-ibus-i18n.h                   src/shared/ngosen-ibus-i18n.h
+src/ngosen-ibus-i18n.cpp                 src/shared/ngosen-ibus-i18n.cpp
+src/ngosen-ibus-keys.h                   src/shared/ngosen-ibus-keys.h
+src/ngosen-ibus-program-name.h           src/shared/ngosen-ibus-program-name.h
+src/ngosen-ibus-program-name.cpp         src/shared/ngosen-ibus-program-name.cpp
+src/ngosen-ibus-resources.h              src/shared/ngosen-ibus-resources.h
+src/ngosen-ibus-resources.cpp            src/shared/ngosen-ibus-resources.cpp
+src/ngosen-ibus-typing-log.h             src/shared/ngosen-ibus-typing-log.h
+src/ngosen-ibus-typing-log.cpp           src/shared/ngosen-ibus-typing-log.cpp
+src/ngosen-ibus-keys.cpp                 src/ngosen-keys.cpp (IBus key parsing replaced by xkbcommon)
+test/ibus-config.cpp                     test/config.cpp (mode menu, release notice, Sen switch and GNOME sources tests left out)
+test/ibus-app-modes.cpp                  test/app-modes.cpp
+test/ibus-program-name.cpp               test/program-name.cpp
+settings/ngosen_settings/backup.py       settings/ngosen_settings/backup.py
+settings/ngosen_settings/brand.py        settings/ngosen_settings/brand.py
+settings/ngosen_settings/i18n.py         settings/ngosen_settings/i18n.py
+settings/ngosen_settings/ini.py          settings/ngosen_settings/ini.py
+settings/ngosen_settings/keymap.py       settings/ngosen_settings/keymap.py
+settings/ngosen_settings/keys.py         settings/ngosen_settings/keys.py
+settings/ngosen_settings/options.py      settings/ngosen_settings/options.py
+settings/ngosen_settings/pages.py        settings/ngosen_settings/pages.py
+settings/ngosen_settings/search.py       settings/ngosen_settings/search.py
+settings/ngosen_settings/store.py        settings/ngosen_settings/store.py
+settings/ngosen_settings/whats_new.py    settings/ngosen_settings/whats_new.py
+settings/ngosen_settings/window.py       settings/ngosen_settings/window.py
+settings/tests/test_backup.py            settings/tests/test_backup.py
+settings/tests/test_i18n.py              settings/tests/test_i18n.py
+settings/tests/test_keys.py              settings/tests/test_keys.py
+settings/tests/test_store.py             settings/tests/test_store.py
+settings/tests/test_window.py            settings/tests/test_window.py
+misc/check-translations.py               misc/check-translations.py
+
+# Changed here:
+# - ngosen-ibus-config.cpp: a new ngosen.conf gets no AnnouncedVersion, and addLaterSettings and
+#   switchSenOnOnce are gone; the IBus edition runs both on its own start.
+# - ngosen-ibus-resources.cpp: no GNOME input sources.
+# - ngosen-ibus-typing-log.cpp: names this edition in the log header.
+# - settings/: no machine-check page, fcitx5 leftovers check, fcitx5 group or GNOME shortcut
+#   checks; the settings this edition lacks are not shown; its own name, app id, gettext domain,
+#   links, backup edition and what's new.

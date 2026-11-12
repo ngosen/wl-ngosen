@@ -1,0 +1,116 @@
+name: CI
+on:
+  push:
+    branches: [main, next, patch]
+    tags: ['*']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  clang-format:
+    name: Check clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: clang-format
+        run: git ls-files '*.c' '*.cpp' '*.h' | xargs -r clang-format --dry-run --Werror
+
+  python:
+    name: Python lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/ruff-action@v4.1.0
+        with:
+          args: 'check .'
+      - uses: astral-sh/ruff-action@v4.1.0
+        with:
+          args: 'format --check .'
+
+  new-names:
+    name: Check new names
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: misc/check-new-names.sh
+
+  # A release ships only typing logic that fcitx5-ngosen users already have. Branches may pin an
+  # untagged commit while the core change waits for its release.
+  core-tag:
+    name: Typing logic is a released tag
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: misc/check-core-tag.sh
+
+  build:
+    name: Build and test (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # A new enough Rust for the core comes only as versioned packages on Ubuntu 24.04.
+          - image: ubuntu:24.04
+            packages: g++ cmake make git ca-certificates pkg-config libglib2.0-dev libxkbcommon-dev libwayland-dev wayland-protocols xkb-data dbus gettext locales python3 python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 xvfb xauth desktop-file-utils appstream cargo-1.91 rustc-1.91
+            path: /usr/lib/rust-1.91/bin
+          - image: fedora:44
+            packages: gcc-c++ cmake make git pkgconf-pkg-config glib2-devel libxkbcommon-devel wayland-devel wayland-protocols-devel xkeyboard-config dbus-daemon gettext glibc-langpack-en python3 python3-gobject gtk4 libadwaita xorg-x11-server-Xvfb desktop-file-utils appstream cargo rust
+    steps:
+      - name: Install dependencies
+        run: |
+          if command -v dnf > /dev/null; then
+            dnf install -y ${{ matrix.packages }}
+          else
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ${{ matrix.packages }}
+            # The tray test reads the menu under an English desktop locale.
+            localedef -i en_US -f UTF-8 en_US.UTF-8
+          fi
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          export PATH="${{ matrix.path }}:$PATH"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j"$(nproc)"
+        env:
+          # A missing GTK or libadwaita package fails the run instead of skipping the window tests.
+          NGOSEN_WINDOW_TESTS: required
+
+  # A memory error in the daemon stops typing in every app until it is started again.
+  sanitizers:
+    name: Tests with ASan and UBSan
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install dependencies
+        run: >-
+          dnf install -y gcc-c++ cmake ninja-build git pkgconf-pkg-config glib2-devel libxkbcommon-devel
+          wayland-devel wayland-protocols-devel xkeyboard-config dbus-daemon gettext glibc-langpack-en python3 python3-gobject gtk4 libadwaita xorg-x11-server-Xvfb cargo rust libasan libubsan
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          san="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_FLAGS="$san" -DCMAKE_CXX_FLAGS="$san" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build build -j"$(nproc)"
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j"$(nproc)"
+        env:
+          # A missing GTK or libadwaita package fails the run instead of skipping the window tests.
+          NGOSEN_WINDOW_TESTS: required
