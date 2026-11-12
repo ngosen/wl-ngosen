@@ -8,6 +8,13 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 
 ## [Chưa phát hành]
 
+## [0.1.0-1] — 12/11/2026
+
+Bản đầu tiên: Ngó Sen chạy thẳng trên Wayland input-method-v2 cho niri, Sway, Hyprland, không cần fcitx5 hay
+IBus; có Gõ Sen và Preedit, nhớ chế độ gõ theo app, tray có menu chọn chế độ gõ, cửa sổ cài đặt dùng chung với
+bản IBus và gói Debian/Ubuntu/Fedora/openSUSE/Arch qua repo chung. Dùng lõi Ngó Sen `ngosen-1.10.0-1`. Tải gói ở
+[release wl-ngosen-0.1.0-1](https://github.com/ngosen/wl-ngosen/releases/tag/wl-ngosen-0.1.0-1).
+
 ### Thêm
 
 - Bắt đầu kho `wl-ngosen`: bộ gõ Ngó Sen chạy thẳng trên Wayland cho niri, Sway, Hyprland, chưa gõ được (#1).
