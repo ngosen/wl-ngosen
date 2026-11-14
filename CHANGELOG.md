@@ -16,7 +16,7 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   chưa có trên Wayland vì `wl-ngosen` chưa nạp danh sách từ tiếng Anh và danh sách giữ từ (#17).
 - Cửa sổ cài đặt thêm công tắc “Gõ thô sau dấu / đầu từ (lệnh, đường dẫn)”, mặc định bật như bản fcitx5 và IBus,
   giữ nguyên từ bắt đầu bằng `/` như `/cost`, `/usr/share`; tắt thì nhớ lựa chọn, lưu cài đặt ở wl-ngosen cũng
-  không còn làm mất lựa chọn đã lưu từ bản IBus trong tệp cài đặt dùng chung (#PR).
+  không còn làm mất lựa chọn đã lưu từ bản IBus trong tệp cài đặt dùng chung (#18).
 
 ## [0.1.0-1] — 12/11/2026
 
