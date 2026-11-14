@@ -14,6 +14,9 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   Space bỏ phím thừa (`đượcd` → `được`), tách từ (`côngty` → `công ty`) hoặc hiểu `g` là `ng` (`nhưg` → `nhưng`);
   Backspace ngay sau đó khôi phục những gì đã gõ. Đây là thay đổi của ngosen/ngosen#756, #757 và #760, trước đây
   chưa có trên Wayland vì `wl-ngosen` chưa nạp danh sách từ tiếng Anh và danh sách giữ từ (#17).
+- Cửa sổ cài đặt thêm công tắc “Gõ thô sau dấu / đầu từ (lệnh, đường dẫn)”, mặc định bật như bản fcitx5 và IBus,
+  giữ nguyên từ bắt đầu bằng `/` như `/cost`, `/usr/share`; tắt thì nhớ lựa chọn, lưu cài đặt ở wl-ngosen cũng
+  không còn làm mất lựa chọn đã lưu từ bản IBus trong tệp cài đặt dùng chung (#PR).
 
 ## [0.1.0-1] — 12/11/2026
 
