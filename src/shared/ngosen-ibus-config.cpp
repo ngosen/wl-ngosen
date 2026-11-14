@@ -304,6 +304,7 @@ namespace ngosen {
         read.boolean("DdFreeStyle", o.ddFreeStyle);
         read.boolean("BackspaceRemovesTone", o.backspaceRemovesTone);
         read.boolean("RetoneSelection", o.retoneSelection);
+        read.boolean("RawWordAfterSlash", o.rawWordAfterSlash);
         read.boolean("RetypeAfterSwitch", o.retypeAfterSwitch);
         read.boolean("EnableMacro", o.enableMacro);
         read.boolean("CapitalizeMacro", o.capitalizeMacro);
@@ -350,6 +351,7 @@ namespace ngosen {
         line("DdFreeStyle", boolText(o.ddFreeStyle));
         line("BackspaceRemovesTone", boolText(o.backspaceRemovesTone));
         line("RetoneSelection", boolText(o.retoneSelection));
+        line("RawWordAfterSlash", boolText(o.rawWordAfterSlash));
         line("RetypeAfterSwitch", boolText(o.retypeAfterSwitch));
         line("EnableMacro", boolText(o.enableMacro));
         line("CapitalizeMacro", boolText(o.capitalizeMacro));

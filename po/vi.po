@@ -811,3 +811,11 @@ msgstr "Tự viết hoa sau . ! ? và Enter. Mặc định tắt; mục Tự vi�
 #: settings/ngosen_settings/whats_new.py
 msgid "“Save typing log” in the tray menu records what you type, to attach to a bug report."
 msgstr "“Lưu nhật ký gõ” trong menu khay ghi lại chữ gõ, để gửi kèm báo lỗi."
+
+#: settings/ngosen_settings/options.py
+msgid "Type a word that starts with / as is"
+msgstr "Gõ thô sau dấu / đầu từ (lệnh, đường dẫn)"
+
+#: settings/ngosen_settings/options.py
+msgid "/cost and /usr/share stay as typed, at the start of a line or after a space, so chat commands and file paths work. và/hoặc and @tên still get tones."
+msgstr "/cost và /usr/share giữ nguyên như đã gõ khi ở đầu dòng hoặc sau dấu cách, để lệnh chat và đường dẫn file chạy đúng. và/hoặc và @tên vẫn có dấu."
