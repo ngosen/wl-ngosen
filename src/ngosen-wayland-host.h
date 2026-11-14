@@ -82,6 +82,7 @@ namespace ngosen {
         Field                        field() const override;
         bool                         hasFocus() const override;
         std::optional<std::string>   takeSelection() override;
+        std::string                  primarySelection() const override;
         void                         showPreedit(const std::string& text, bool underline) override;
         void                         clearPreedit() override;
         void                         resetPanel() override;
