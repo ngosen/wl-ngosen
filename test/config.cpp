@@ -80,6 +80,7 @@ namespace {
         check(sameOptions(defaults, expected), "the defaults are the fcitx5 edition's");
         check(defaults.options.retypeAfterSwitch, "Cứu chữ is on by default, as in fcitx5");
         check(defaults.options.retoneSelection, "RetoneSelection is on by default, as in fcitx5");
+        check(defaults.options.rawWordAfterSlash, "RawWordAfterSlash is on by default, as in fcitx5");
 
         const IBusSettings read = readSettings(parseIni(FcitxSettings));
         check(read.options.inputMethod == "VNI", "InputMethod is read");
@@ -102,6 +103,7 @@ namespace {
         changed.options.timeFormat           = "%H giờ %M";
         changed.options.spellCheck           = false;
         changed.options.retoneSelection      = false;
+        changed.options.rawWordAfterSlash    = false;
         changed.options.retypeAfterSwitch    = false;
         changed.options.doubleSpaceToPeriod  = true;
         changed.options.doubleHyphenToEmDash = true;
@@ -112,9 +114,10 @@ namespace {
         const std::string text               = settingsText(changed);
         check(sameOptions(readSettings(parseIni(text)), changed), "settings round trip");
         check(!readSettings(parseIni(text)).options.retoneSelection, "RetoneSelection round trip");
+        check(!readSettings(parseIni(text)).options.rawWordAfterSlash, "RawWordAfterSlash round trip");
         check(!readSettings(parseIni(text)).options.retypeAfterSwitch, "RetypeAfterSwitch round trip");
         check(readSettings(parseIni(text)).options.enableMacroInOffMode, "EnableMacroInOffMode round trip");
-        check(parseIni(text).top.size() == 46, "the file has every key");
+        check(parseIni(text).top.size() == 47, "the file has every key");
         // fcitx5 reads SettingsVersion as the version of its own upgrades.
         check(parseIni(text).top.count("SettingsVersion") == 0, "no SettingsVersion");
     }

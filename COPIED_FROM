@@ -1,6 +1,6 @@
 # Files copied from https://github.com/ngosen/ibus-ngosen at this commit. The weekly "Copied code"
 # workflow compares them with ibus-ngosen next; bring a change over and move the commit forward.
-commit 67dc708e66cbd20a6b0838bdb735045f30c8d96e
+commit 18c61ba7ebcd237dae4bcf6cab3071117be10b7a
 
 # copied file (in ibus-ngosen)           here
 src/ngosen-ibus-app-modes.h              src/shared/ngosen-ibus-app-modes.h

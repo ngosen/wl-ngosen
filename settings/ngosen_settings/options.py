@@ -101,6 +101,7 @@ LABELS = {
     "FreeMarking": N_("Allow Type With More Freedom"),
     "BackspaceRemovesTone": N_("Backspace Removes the Tone Mark"),
     "RetoneSelection": N_("Change the tone of a typed word"),
+    "RawWordAfterSlash": N_("Type a word that starts with / as is"),
     "RetypeAfterSwitch": N_("Retype text typed before switching on"),
     "W2U": N_("Type w to Produce ư"),
     "BracketTransform": N_("Type [ -> ơ, ] -> ư, { -> Ơ, } -> Ư"),
@@ -148,6 +149,9 @@ HINTS = {
     "FreeMarking": N_("Tone marks can also go at the end of the word."),
     "BackspaceRemovesTone": N_(
         "z in Telex (0 in VNI) removes the tone mark even with this off. On a word without one, Backspace deletes as usual."
+    ),
+    "RawWordAfterSlash": N_(
+        "/cost and /usr/share stay as typed, at the start of a line or after a space, so chat commands and file paths work. và/hoặc and @tên still get tones."
     ),
     "RetoneSelection": N_(
         "Click right after chao, or select it in an X11 app, and type f to get chào. Only when typing with Sen; Tab or Esc puts the key back."
@@ -212,6 +216,7 @@ TYPING_GROUPS = [
             "CapitalizeStartOfText",
             "DoubleSpaceToPeriod",
             "DoubleHyphenToEmDash",
+            "RawWordAfterSlash",
         ],
     ),
     # No mode menu in the field, mode keys, Vim mode, Cứu dấu or Cứu chữ in this edition.
