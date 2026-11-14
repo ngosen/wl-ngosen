@@ -31,6 +31,12 @@ namespace ngosen {
         uintptr_t macroTable() const override {
             return shared_.macroTable();
         }
+        uintptr_t englishWords() const override {
+            return shared_.englishWords();
+        }
+        uintptr_t keepWords() const override {
+            return shared_.keepWords();
+        }
         std::vector<EmojiEntry> emojiHistory() override {
             return {};
         }
@@ -82,6 +88,7 @@ namespace ngosen {
         Field                        field() const override;
         bool                         hasFocus() const override;
         std::optional<std::string>   takeSelection() override;
+        std::string                  primarySelection() const override;
         void                         showPreedit(const std::string& text, bool underline) override;
         void                         clearPreedit() override;
         void                         resetPanel() override;

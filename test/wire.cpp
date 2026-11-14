@@ -29,6 +29,7 @@ namespace {
     constexpr uint32_t KeyA = 30, KeyS = 31, KeyZ = 44, KeyLeftShift = 42, KeyLeftCtrl = 29, KeyLeftAlt = 56;
     constexpr uint32_t KeyC = 46, KeyH = 35, KeyO = 24, KeyF = 33, KeySpace = 57;
     constexpr uint32_t KeyV = 47, KeyI = 23, KeyE = 18, KeyJ = 36, KeyT = 20, KeyN = 49, KeyG = 34, KeyBackspace = 14;
+    constexpr uint32_t KeyD = 32, KeyU = 22, KeyW = 17, KeyY = 21;
     constexpr uint32_t PurposePassword = 8, CauseOther = 1;
     // Modifier bits of the us keymap the test compositor sends.
     constexpr uint32_t ShiftBit = 1U << 0, CtrlBit = 1U << 2, AltBit = 1U << 3;
@@ -81,7 +82,8 @@ namespace {
             std::ofstream(fs::path(home) / ".config/ngosen/ngosen.conf") << settings;
         }
         // Flatpak exports in the test home only, so the host's installed apps cannot rename one.
-        std::vector<std::string> env = {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY, "XDG_DATA_DIRS=" + home + "/flatpak/exports/share"};
+        std::vector<std::string> env = {std::string("NGOSEN_IBUS_DICTIONARY=") + TEST_DICTIONARY, std::string("NGOSEN_IBUS_ENGLISH_WORDS=") + TEST_ENGLISH_WORDS,
+                                        std::string("NGOSEN_IBUS_KEEP_WORDS=") + TEST_KEEP_WORDS, "XDG_DATA_DIRS=" + home + "/flatpak/exports/share"};
         env.insert(env.end(), extraEnv.begin(), extraEnv.end());
         compositor.start(program, home, env);
         return compositor.waitFor([&] { return compositor.hasClient() && compositor.logged("vk.create"); });
@@ -482,6 +484,18 @@ namespace {
             // ệ is three bytes and replaces ê, two: a count in characters would cut into "Xin".
             check(fieldShows(compositor, "Xin việt "), "deletes count bytes, so text before the word stays", &compositor);
             check(compositor.count("im.delete ") > 0, "a field that shows the word is edited through surrounding text", &compositor);
+            compositor.stop();
+        }
+        {
+            TestCompositor compositor({});
+            check(begin(compositor, "sen-keep", "", Language::Vietnamese), "setup for the keep list", &compositor);
+            compositor.openField("xin ");
+            check(compositor.waitFor([&] { return compositor.grabbed(); }), "grab for the keep list", &compositor);
+            type(compositor, {KeyD, KeyD, KeyU, KeyO, KeyW, KeyJ, KeyC, KeyD, KeySpace, KeyC, KeyO, KeyO, KeyN, KeyG, KeyT, KeyY, KeySpace});
+            type(compositor, {KeyN, KeyH, KeyU, KeyW, KeyG, KeySpace});
+            check(fieldShows(compositor, "xin được công ty nhưng "), "Space fixes a word a stray key broke", &compositor);
+            type(compositor, {KeyBackspace});
+            check(fieldShows(compositor, "xin được công ty nhưg"), "Backspace brings back what was typed", &compositor);
             compositor.stop();
         }
         {

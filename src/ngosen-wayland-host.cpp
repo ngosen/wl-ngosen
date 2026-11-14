@@ -252,6 +252,11 @@ namespace ngosen {
         return std::nullopt;
     }
 
+    // Converting selected text is a fcitx5 shortcut; this edition has none.
+    std::string WaylandHost::primarySelection() const {
+        return {};
+    }
+
     void WaylandHost::showPreedit(const std::string& text, bool /*underline*/) {
         preedit_ = text;
     }

@@ -318,7 +318,7 @@ msgstr "Định dạng giờ ($TIME trong gõ tắt)"
 
 #: settings/ngosen_settings/options.py
 msgid "Date Format ($DATE in macro)"
-msgstr "Định dạng ngày ($DATE trong macro)"
+msgstr "Định dạng ngày ($DATE trong gõ tắt)"
 
 #: settings/ngosen_settings/options.py
 msgid "Opens a menu to pick Sen, underlined typing or Off for the app in use. Press it twice to type the key itself; while typing English it types as usual."

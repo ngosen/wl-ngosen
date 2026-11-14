@@ -8,6 +8,13 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 
 ## [Chưa phát hành]
 
+### Thay đổi
+
+- Gõ thừa phím sau từ tiếng Việt vẫn giữ được từ (Telex `dduowjcd` thành `đượcd`, không trả về phím gõ thô);
+  Space bỏ phím thừa (`đượcd` → `được`), tách từ (`côngty` → `công ty`) hoặc hiểu `g` là `ng` (`nhưg` → `nhưng`);
+  Backspace ngay sau đó khôi phục những gì đã gõ. Đây là thay đổi của ngosen/ngosen#756, #757 và #760, trước đây
+  chưa có trên Wayland vì `wl-ngosen` chưa nạp danh sách từ tiếng Anh và danh sách giữ từ (#17).
+
 ## [0.1.0-1] — 12/11/2026
 
 Bản đầu tiên: Ngó Sen chạy thẳng trên Wayland input-method-v2 cho niri, Sway, Hyprland, không cần fcitx5 hay
