@@ -14,7 +14,9 @@ add_library(ngosen_shared STATIC
 )
 target_include_directories(ngosen_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/shared)
 target_compile_definitions(ngosen_shared PUBLIC GETTEXT_PACKAGE="wl-ngosen" NGOSEN_IBUS_VERSION="${PROJECT_VERSION}")
-target_compile_definitions(ngosen_shared PRIVATE NGOSEN_IBUS_DICTIONARY="${NGOSEN_WL_DATADIR}/vietnamese.cm.dict")
+target_compile_definitions(ngosen_shared PRIVATE NGOSEN_IBUS_DICTIONARY="${NGOSEN_WL_DATADIR}/vietnamese.cm.dict"
+                                                  NGOSEN_IBUS_ENGLISH_WORDS="${NGOSEN_WL_DATADIR}/english-common.txt"
+                                                  NGOSEN_IBUS_KEEP_WORDS="${NGOSEN_WL_DATADIR}/keep-words.txt")
 # The core calls the shell's log (ngosen-log.h), so the log comes after the core on the link line.
 add_library(ngosen_wl_log STATIC ngosen-log.cpp)
 target_include_directories(ngosen_wl_log PRIVATE $<TARGET_PROPERTY:ngosen_core,INTERFACE_INCLUDE_DIRECTORIES>)
@@ -42,4 +44,9 @@ target_compile_definitions(wl-ngosen PRIVATE NGOSEN_LOCALEDIR="${CMAKE_INSTALL_F
 target_link_libraries(wl-ngosen PRIVATE ngosen_wayland)
 
 install(TARGETS wl-ngosen DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES ${PROJECT_SOURCE_DIR}/ngosen/data/dictionaries/vietnamese.cm.dict DESTINATION ${NGOSEN_WL_DATADIR})
+install(FILES ${PROJECT_SOURCE_DIR}/ngosen/data/dictionaries/vietnamese.cm.dict
+              ${PROJECT_SOURCE_DIR}/ngosen/data/english-common.txt
+              ${PROJECT_SOURCE_DIR}/ngosen/data/english-common.txt.license
+              ${PROJECT_SOURCE_DIR}/ngosen/data/keep-words.txt
+              ${PROJECT_SOURCE_DIR}/ngosen/data/keep-words.txt.license
+        DESTINATION ${NGOSEN_WL_DATADIR})

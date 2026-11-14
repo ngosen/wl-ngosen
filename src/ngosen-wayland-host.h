@@ -31,6 +31,12 @@ namespace ngosen {
         uintptr_t macroTable() const override {
             return shared_.macroTable();
         }
+        uintptr_t englishWords() const override {
+            return shared_.englishWords();
+        }
+        uintptr_t keepWords() const override {
+            return shared_.keepWords();
+        }
         std::vector<EmojiEntry> emojiHistory() override {
             return {};
         }

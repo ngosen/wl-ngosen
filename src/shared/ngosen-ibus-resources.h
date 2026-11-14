@@ -16,6 +16,8 @@ namespace ngosen {
 
     // The word list that comes with the package.
     std::string bundledDictionaryFile();
+    std::string bundledEnglishWordsFile();
+    std::string bundledKeepWordsFile();
 
     // Settings and tables every field shares. No emoji list: the IBus edition has no emoji picker.
     class IBusResources final : public EngineResources {
@@ -36,6 +38,12 @@ namespace ngosen {
         }
         uintptr_t macroTable() const override {
             return macroTable_;
+        }
+        uintptr_t englishWords() const override {
+            return englishWords_;
+        }
+        uintptr_t keepWords() const override {
+            return keepWords_;
         }
         std::vector<EmojiEntry> emojiHistory() override {
             return {};
@@ -83,6 +91,8 @@ namespace ngosen {
         std::vector<KeymapEntry> keymap_;
         uintptr_t                dictionary_     = 0;
         uintptr_t                macroTable_     = 0;
+        uintptr_t                englishWords_   = 0;
+        uintptr_t                keepWords_      = 0;
         unsigned                 generation_     = 0;
         bool                     changed_        = false;
         bool                     englishChanged_ = false;

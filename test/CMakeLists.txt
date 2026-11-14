@@ -47,6 +47,8 @@ target_link_libraries(wire-test PRIVATE test_compositor)
 target_compile_definitions(wire-test PRIVATE TEST_LOCALEDIR="${PROJECT_BINARY_DIR}/locale")
 add_dependencies(wire-test translations)
 target_compile_definitions(wire-test PRIVATE TEST_DICTIONARY="${PROJECT_SOURCE_DIR}/ngosen/data/dictionaries/vietnamese.cm.dict")
+target_compile_definitions(wire-test PRIVATE TEST_ENGLISH_WORDS="${PROJECT_SOURCE_DIR}/ngosen/data/english-common.txt"
+                                            TEST_KEEP_WORDS="${PROJECT_SOURCE_DIR}/ngosen/data/keep-words.txt")
 if (NGOSEN_WL_SESSION_TESTS)
     add_test(NAME wire COMMAND wire-test $<TARGET_FILE:wl-ngosen>)
     set_tests_properties(wire PROPERTIES LABELS "wire" TIMEOUT 120)
