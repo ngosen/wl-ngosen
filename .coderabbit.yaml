@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+inheritance: true
+
+knowledge_base:
+  code_guidelines:
+    # The core's rules apply to code that drives it; its submodule is not cloned for review.
+    filePatterns:
+      - "**/AGENTS.md"
+      - "**/CLAUDE.md"
+      - "ngosen/ngosen:AGENTS.md"
+
+reviews:
+  path_filters:
+    - "!ngosen/**"
