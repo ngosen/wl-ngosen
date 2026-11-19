@@ -7,7 +7,9 @@ knowledge_base:
     filePatterns:
       - "**/AGENTS.md"
       - "**/CLAUDE.md"
-      - "ngosen/ngosen:AGENTS.md"
+      # A plain string would drop the core's rules that name no files.
+      - files: "ngosen/ngosen:AGENTS.md"
+        applyTo: "**"
 
 reviews:
   path_filters:
