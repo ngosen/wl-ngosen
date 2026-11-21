@@ -14,7 +14,7 @@ from .test_window import CAN_RUN, Vietnamese, window
 DEFAULT_TOGGLE = "Control+Shift_L Control+Shift_R Shift+Control_L Shift+Control_R"
 DEFAULTS = {
     "InputMethod": "Telex",
-    "SpellCheck": "True",
+    "DdFreeStyle": "True",
     "EnableMacro": "True",
     "EnableDictionary": "False",
     "EnableCustomKeymap": "False",
@@ -58,7 +58,7 @@ def fcitx5_backup(**config):
         "VietnameseOn": "True",
         "SettingsVersion": "3",
         "ModeMenuKey": {"0": "grave"},
-        "SpellCheck": "False",
+        "DdFreeStyle": "False",
         "EnableMacro": "True",
         "EnableDictionary": "True",
         "EnableCustomKeymap": "True",
@@ -82,7 +82,7 @@ class UserFiles:
         os.environ["XDG_STATE_HOME"] = os.path.join(self.home, "state")
         self.folder = os.path.join(self.home, "config")
         self.engine = FileEngine(self.folder)
-        write_text(os.path.join(self.folder, "ngosen.conf"), "SpellCheck=True\nFutureKey=kept\n")
+        write_text(os.path.join(self.folder, "ngosen.conf"), "DdFreeStyle=True\nFutureKey=kept\n")
         write_text(
             os.path.join(self.folder, "ngosen-macro-table.conf"),
             ini.list_text("Macro", [("dt", "điện thoại")]),
@@ -124,7 +124,7 @@ class BackupTest(UserFiles, unittest.TestCase):
         self.assertEqual(notes, [])
         settings = self.settings()
         self.assertEqual(settings["InputMethod"], "VNI")
-        self.assertEqual(settings["SpellCheck"], "False")
+        self.assertEqual(settings["DdFreeStyle"], "False")
         self.assertEqual(settings["DirectTyping"], "True")
         self.assertEqual(settings["ToggleKey"], "Shift+Alt_L Alt+Shift_L")
         self.assertEqual(settings["ModeMenuKey"], "apostrophe")
@@ -374,7 +374,7 @@ class BackupTest(UserFiles, unittest.TestCase):
         self.assertEqual(caught.exception.paths, calls[:2])
 
     def test_undo_puts_back_the_exact_bytes(self):
-        write_text(self.paths.settings, "# mine\r\nSpellCheck=True\n\xff")
+        write_text(self.paths.settings, "# mine\r\nDdFreeStyle=True\n\xff")
         before = self.files()
         snapshot, _ = self.restore(fcitx5_backup(VietnameseOn="False"))
         self.assertNotEqual(self.files(), before)
@@ -404,7 +404,7 @@ class BackupTest(UserFiles, unittest.TestCase):
     def test_export_then_restore_gives_the_same_files(self):
         write_text(
             self.paths.settings,
-            "InputMethod=VNI\nSpellCheck=False\nEnableMacro=True\nEnableDictionary=True\n"
+            "InputMethod=VNI\nDdFreeStyle=False\nEnableMacro=True\nEnableDictionary=True\n"
             "EnableCustomKeymap=False\nDirectTyping=True\nToggleKey=Alt+z\n"
             "ModeMenuKey=Shift+asciitilde\n",
         )
@@ -508,16 +508,16 @@ class WindowBackupTest(UserFiles, unittest.TestCase):
 
     def test_restore_then_undo(self):
         before = self.files()
-        self.assertTrue(self.window.rows.rows["SpellCheck"].get_active())
+        self.assertTrue(self.window.rows.rows["DdFreeStyle"].get_active())
         self.assertIsNone(self.window.restore_backup(self.save(fcitx5_backup())))
         self.assertEqual(self.window.toast.get_title(), "Restored from backup.json.")
-        self.assertFalse(self.window.rows.rows["SpellCheck"].get_active())
+        self.assertFalse(self.window.rows.rows["DdFreeStyle"].get_active())
         self.assertEqual(self.store.macros, [("kg", "khô gà")])
         self.assertEqual(self.store.keymap, [("z", "Tone0")])
         self.assertIsNotNone(self.window.keymap.list.get_row_at_index(0))
         self.window.toast.emit("button-clicked")
         self.assertEqual(self.files(), before)
-        self.assertTrue(self.window.rows.rows["SpellCheck"].get_active())
+        self.assertTrue(self.window.rows.rows["DdFreeStyle"].get_active())
         self.assertEqual(self.store.macros, [("dt", "điện thoại")])
         self.assertEqual(self.store.keymap, [])
         self.assertIsNone(self.window.keymap.list.get_row_at_index(0))
@@ -537,7 +537,7 @@ class WindowBackupTest(UserFiles, unittest.TestCase):
     def test_undo_skipped_after_a_later_change(self):
         self.window.restore_backup(self.save(fcitx5_backup()))
         undo = self.window.toast
-        self.window.save("SpellCheck", "True")
+        self.window.save("DdFreeStyle", "True")
         changed = self.files()
         undo.emit("button-clicked")
         self.assertEqual(self.files(), changed)

@@ -186,7 +186,7 @@ namespace ngosen {
     }
 
     // The user's dictionary only with the custom dictionary on, as the fcitx5 edition does. The
-    // spell check reads the packaged one otherwise.
+    // restore of invalid words reads the packaged one otherwise.
     uintptr_t IBusResources::openDictionary() const {
         if (settings_.enableDictionary) {
             if (const uintptr_t dictionary = openDictionaryAt(paths_.dictionaryFile())) {

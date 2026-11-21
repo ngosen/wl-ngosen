@@ -18,6 +18,12 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
   giữ nguyên từ bắt đầu bằng `/` như `/cost`, `/usr/share`; tắt thì nhớ lựa chọn, lưu cài đặt ở wl-ngosen cũng
   không còn làm mất lựa chọn đã lưu từ bản IBus trong tệp cài đặt dùng chung (#18).
 
+### Bỏ
+
+- Bỏ ô "Kiểm tra chính tả" khỏi cửa sổ cài đặt và menu khay, vì nó chỉ có tác dụng khi "Tự khôi phục từ gõ sai"
+  đang bật: nay Tự khôi phục luôn so với từ điển, như bản fcitx5 và IBus. Ai từng tắt ô này để giữ dấu cho chữ kiểu
+  chat như `zậy`, `kạ`, hãy thêm chữ đó vào Từ điển tuỳ chỉnh (ngosen/ngosen#112) (#21).
+
 ## [0.1.0-1] — 12/11/2026
 
 Bản đầu tiên: Ngó Sen chạy thẳng trên Wayland input-method-v2 cho niri, Sway, Hyprland, không cần fcitx5 hay

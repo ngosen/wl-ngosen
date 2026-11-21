@@ -50,7 +50,7 @@ namespace {
         {
             IBusResources resources(paths);
             IBusSettings  saved;
-            check(resources.saveSetting("SpellCheck", "False", saved), "save one setting");
+            check(resources.saveSetting("CapitalizeMacro", "False", saved), "save one setting");
             check(resources.saveSetting("DirectTyping", "False", saved), "save the typing mode");
         }
         AppModes modes(paths.appModesFile());
@@ -72,7 +72,7 @@ namespace {
         IBusResources resources(paths);
         fs::remove(paths.settingsFile());
         IBusSettings saved;
-        check(resources.saveSetting("SpellCheck", "False", saved), "save into a deleted file");
+        check(resources.saveSetting("CapitalizeMacro", "False", saved), "save into a deleted file");
         const IniFile ini = parseIni(read(paths.settingsFile()));
         check(ini.top.at("InputMethod") == "VNI", "the input method survives a deleted file");
         check(ini.top.at("RetypeAfterSwitch") == "False" && ini.top.at("RetoneSelection") == "False", "options this edition lacks keep the user's value");

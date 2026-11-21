@@ -39,7 +39,6 @@ SHOW_MODES = ["ShowModeSen", "ShowModePreedit", "ShowModeOff", "ShowModeVim"]
 SHOW_MENUS = [
     "ShowMenuInputMethod",
     "ShowMenuCharset",
-    "ShowMenuSpellCheck",
     "ShowMenuMacro",
     "ShowMenuCapitalizeMacro",
     "ShowMenuAutoCapitalize",
@@ -79,7 +78,6 @@ LABELS = {
     # Under a group title that says where they show, so each is named as in the menu.
     "ShowMenuInputMethod": N_("Input Method"),
     "ShowMenuCharset": N_("Charset"),
-    "ShowMenuSpellCheck": N_("Spell Check"),
     "ShowMenuMacro": N_("Macro"),
     "ShowMenuCapitalizeMacro": N_("Capitalize Macro"),
     "ShowMenuAutoCapitalize": N_("Auto Capitalize"),
@@ -92,7 +90,6 @@ LABELS = {
     "DirectTyping": N_("Mode"),
     "OutputCharset": N_("Output Charset"),
     "EnableCustomKeymap": N_("Custom Keymap"),
-    "SpellCheck": N_("Enable Spell Check Using Dictionary"),
     "EnableDictionary": N_("Custom Dictionary"),
     "AutoNonVnRestore": N_("Auto Restore Invalid Words"),
     "LockWordModifier": N_("Key to Keep the Word as Typed"),
@@ -136,7 +133,6 @@ HINTS = {
         "Keep Unicode unless an old document or app needs another one, such as TCVN3 (ABC)."
     ),
     "EnableCustomKeymap": N_("The keys below, used when the input method is Custom."),
-    "SpellCheck": N_("Words that are not Vietnamese get no tone marks."),
     "EnableDictionary": N_(
         "Check spelling against the list below. Off: the list that comes with Ngó Sen."
     ),
@@ -198,7 +194,6 @@ TYPING_GROUPS = [
     (
         N_("Tone marks"),
         [
-            "SpellCheck",
             "AutoNonVnRestore",
             "LockWordModifier",
             "DdFreeStyle",
