@@ -117,7 +117,8 @@ namespace {
         check(!readSettings(parseIni(text)).options.rawWordAfterSlash, "RawWordAfterSlash round trip");
         check(!readSettings(parseIni(text)).options.retypeAfterSwitch, "RetypeAfterSwitch round trip");
         check(readSettings(parseIni(text)).options.enableMacroInOffMode, "EnableMacroInOffMode round trip");
-        check(parseIni(text).top.size() == 47, "the file has every key");
+        check(parseIni(text).top.size() == 45, "the file has every key");
+        check(parseIni(text).top.count("SpellCheck") == 0 && parseIni(text).top.count("ShowMenuSpellCheck") == 0, "Spell Check is not a setting");
         // fcitx5 reads SettingsVersion as the version of its own upgrades.
         check(parseIni(text).top.count("SettingsVersion") == 0, "no SettingsVersion");
     }

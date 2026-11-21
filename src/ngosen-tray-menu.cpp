@@ -23,7 +23,6 @@ namespace ngosen {
 
         // The IBus edition's items, without "Type with Sen": the mode items below pick it.
         const Toggle Toggles[] = {
-            {"SpellCheck", N_("Spell Check"), [](const IBusSettings& s) { return s.options.spellCheck; }, &IBusSettings::showMenuSpellCheck},
             {"EnableMacro", N_("Macro"), [](const IBusSettings& s) { return s.options.enableMacro; }, &IBusSettings::showMenuMacro},
             {"CapitalizeMacro", N_("Capitalize Macro"), [](const IBusSettings& s) { return s.options.capitalizeMacro; }, &IBusSettings::showMenuCapitalizeMacro},
             {"AutoNonVnRestore", N_("Auto Restore Invalid Words"), [](const IBusSettings& s) { return s.options.autoNonVnRestore; }, &IBusSettings::showMenuAutoRestore},

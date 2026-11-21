@@ -58,7 +58,6 @@ namespace ngosen {
         // Which items the top bar menu shows, as fcitx5 hides items of its tray menu.
         bool showMenuInputMethod     = true;
         bool showMenuCharset         = true;
-        bool showMenuSpellCheck      = true;
         bool showMenuMacro           = true;
         bool showMenuCapitalizeMacro = true;
         bool showMenuAutoCapitalize  = true;

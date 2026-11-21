@@ -58,6 +58,7 @@ namespace {
         const TrayItem* charset = find(menu, "Charset");
         check(charset != nullptr && !charset->visible, "a menu item hidden in the settings stays hidden");
         check(find(menu, "VNI") != nullptr && find(menu, "Microsoft layout") == nullptr, "only Telex and VNI in the menu");
+        check(find(menu, "Spell Check") == nullptr && find(menu, "Auto Restore Invalid Words") != nullptr, "the menu has no Spell Check item");
     }
 
     void testClicks() {

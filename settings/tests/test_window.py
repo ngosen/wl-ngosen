@@ -486,6 +486,12 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(window.search.fold("Chính TẢ Đúng"), "chinh ta dung")
         self.assertTrue(any(hasattr(r, "found") for r in self.search("PRODUCE")))
 
+    def test_spell_check_is_not_a_setting(self):
+        self.assertIn("AutoNonVnRestore", self.window.rows.rows)
+        self.assertIn("ShowMenuAutoRestore", self.window.rows.rows)
+        self.assertNotIn("SpellCheck", self.window.rows.rows)
+        self.assertNotIn("ShowMenuSpellCheck", self.window.rows.rows)
+
     def test_enter_right_after_typing_opens_what_was_typed(self):
         self.search("macro")
         self.window.search_entry.set_text("dd to produce")
