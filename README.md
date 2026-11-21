@@ -1,7 +1,7 @@
 # Ngó Sen cho Wayland (`wl-ngosen`)
 
-**Dành cho niri, Sway, Hyprland.** Dùng GNOME thì cài [Ngó Sen cho GNOME](https://github.com/ngosen/ibus-ngosen),
-dùng KDE hay các desktop khác thì cài [Ngó Sen](https://github.com/ngosen/ngosen).
+**Dành cho niri, Sway, Hyprland.** Dùng GNOME, KDE hay desktop khác thì cài [bản fcitx5](https://github.com/ngosen/ngosen)
+hoặc [bản IBus](https://github.com/ngosen/ibus-ngosen); hai bản tính năng như nhau, chọn bản nào là tuỳ thích.
 
 Bộ gõ tiếng Việt Ngó Sen chạy thẳng trên giao thức Wayland input-method-v2, không cần fcitx5 hay IBus.
 Đây là **bản thử nghiệm** cho người quen tự cấu hình compositor.
