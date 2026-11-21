@@ -47,9 +47,9 @@ namespace {
 
     void testMenu() {
         IBusSettings settings;
-        settings.options.spellCheck = true;
-        settings.showMenuCharset    = false;
-        const auto menu             = trayMenu(settings, {false, "firefox", Mode::Preedit});
+        settings.options.capitalizeMacro = true;
+        settings.showMenuCharset         = false;
+        const auto menu                  = trayMenu(settings, {false, "firefox", Mode::Preedit});
         check(menu.front().action == LanguageAction && menu.front().checked, "Vietnamese comes first and is checked");
         const TrayItem* heading = find(menu, "Typing mode for firefox");
         check(heading != nullptr && !heading->enabled, "the heading names the app and cannot be clicked");
@@ -62,9 +62,9 @@ namespace {
 
     void testClicks() {
         IBusSettings settings;
-        settings.options.spellCheck = true;
+        settings.options.capitalizeMacro = true;
         std::string key, value;
-        check(settingForClick("SpellCheck", settings, key, value) && key == "SpellCheck" && value == "False", "an on/off item flips what the file says");
+        check(settingForClick("CapitalizeMacro", settings, key, value) && key == "CapitalizeMacro" && value == "False", "an on/off item flips what the file says");
         check(settingForClick("CapitalizeStartOfText", settings, key, value) && key == "CapitalizeStartOfText", "the capitalize submenu items are settings");
         check(settingForClick("InputMethod/VNI", settings, key, value) && key == "InputMethod" && value == "VNI", "a method item sets the method");
         check(!settingForClick("InputMethod/Bogus", settings, key, value), "an unknown method is refused");

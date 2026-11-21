@@ -830,12 +830,12 @@ namespace {
               "a click on the icon switches to English, shared with the IBus edition", &compositor);
         check(bus.iconName(item) == "wl-ngosen-off", "the icon shows English", &compositor);
         check(bus.toggleState(item, "Vietnamese") == 0, "the menu unchecks Vietnamese", &compositor);
-        bus.click(item, bus.menuId(item, "Spell Check"));
+        bus.click(item, bus.menuId(item, "Capitalize Macro"));
         check(compositor.waitFor([&] {
             bus.pump();
-            return fileHas("tray", "ngosen.conf", "SpellCheck=False") && bus.toggleState(item, "Spell Check") == 0;
+            return fileHas("tray", "ngosen.conf", "CapitalizeMacro=False") && bus.toggleState(item, "Capitalize Macro") == 0;
         }),
-              "a click on Spell Check saves it and the menu shows what was saved", &compositor);
+              "a click on Capitalize Macro saves it and the menu shows what was saved", &compositor);
         tapCtrlShift(compositor);
         check(compositor.waitFor([&] {
             bus.pump();

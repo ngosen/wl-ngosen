@@ -42,7 +42,7 @@ class FakeEngine:
         return {
             "InputMethod": "Telex",
             "OutputCharset": "Unicode",
-            "SpellCheck": "True",
+            "DdFreeStyle": "True",
             "W2U": "Non-Start",
             "TimeFormat": "%H:%M:%S %Z",
             "EnableMacro": "True",
@@ -91,7 +91,7 @@ class WindowTest(unittest.TestCase):
         Adw.init()
         window.i18n._translation = Vietnamese()
         self.folder = tempfile.mkdtemp()
-        write_text(os.path.join(self.folder, "ngosen.conf"), "SpellCheck=True\nFutureKey=kept\n")
+        write_text(os.path.join(self.folder, "ngosen.conf"), "DdFreeStyle=True\nFutureKey=kept\n")
         write_text(os.path.join(self.folder, "bundled.dict"), "việt\nnam\n")
         self.store = Store(FakeEngine(self.folder), self.folder)
         names = {
@@ -118,12 +118,12 @@ class WindowTest(unittest.TestCase):
             self.assertIn(key, rows)
 
     def test_switch_saves_and_undoes(self):
-        self.window.rows.rows["SpellCheck"].set_active(False)
-        self.assertEqual(self.settings(), {"SpellCheck": "False", "FutureKey": "kept"})
+        self.window.rows.rows["DdFreeStyle"].set_active(False)
+        self.assertEqual(self.settings(), {"DdFreeStyle": "False", "FutureKey": "kept"})
         self.assertIsNotNone(self.window.toast)
         self.window.undo()
-        self.assertEqual(self.settings()["SpellCheck"], "True")
-        self.assertTrue(self.window.rows.rows["SpellCheck"].get_active())
+        self.assertEqual(self.settings()["DdFreeStyle"], "True")
+        self.assertTrue(self.window.rows.rows["DdFreeStyle"].get_active())
 
     def test_mode_buttons_save_sen_or_preedit(self):
         buttons = self.window.rows.mode_buttons
@@ -471,28 +471,26 @@ class WindowTest(unittest.TestCase):
         return results
 
     def test_a_found_setting_opens_on_its_page_with_the_focus(self):
-        spell = self.window.rows.rows["SpellCheck"]
-        results = self.search("spell check dictionary")
-        self.assertEqual([r.found[0] for r in results if hasattr(r, "found")], [spell])
+        dd = self.window.rows.rows["DdFreeStyle"]
+        results = self.search("dd to produce")
+        self.assertEqual([r.found[0] for r in results if hasattr(r, "found")], [dd])
         self.assertEqual(self.window.side_stack.get_visible_child_name(), "results")
         self.window.stack.set_visible_child(self.window.whats_new.page)
         self.window.search_entry.emit("activate")
-        self.assertIs(
-            self.window.stack.get_visible_child(), spell.get_ancestor(Adw.PreferencesPage)
-        )
-        self.assertIs(self.window.get_focus(), spell)
+        self.assertIs(self.window.stack.get_visible_child(), dd.get_ancestor(Adw.PreferencesPage))
+        self.assertIs(self.window.get_focus(), dd)
         self.assertEqual(self.window.side_stack.get_visible_child_name(), "pages")
         self.assertEqual(self.window.search_entry.get_text(), "")
 
     def test_search_ignores_tone_marks_and_case(self):
         self.assertEqual(window.search.fold("Chính TẢ Đúng"), "chinh ta dung")
-        self.assertTrue(any(hasattr(r, "found") for r in self.search("SPELL")))
+        self.assertTrue(any(hasattr(r, "found") for r in self.search("PRODUCE")))
 
     def test_enter_right_after_typing_opens_what_was_typed(self):
         self.search("macro")
-        self.window.search_entry.set_text("spell check dictionary")
+        self.window.search_entry.set_text("dd to produce")
         self.window.search_entry.emit("activate")
-        self.assertIs(self.window.get_focus(), self.window.rows.rows["SpellCheck"])
+        self.assertIs(self.window.get_focus(), self.window.rows.rows["DdFreeStyle"])
 
     def test_the_users_own_entries_are_not_settings(self):
         # A macro row's title is its abbreviation.

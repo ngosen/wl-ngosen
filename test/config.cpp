@@ -91,8 +91,8 @@ namespace {
         check(read.options.retypeAfterSwitch, "RetypeAfterSwitch is read");
         check(!read.options.retoneSelection, "RetoneSelection is read");
 
-        const IBusSettings odd = readSettings(parseIni("InputMethod=Nope\nSpellCheck=yes\nOutputCharset=Nope\nLockWordModifier=Disabled\n"));
-        check(odd.options.inputMethod == "Telex" && odd.options.spellCheck && odd.options.outputCharset == "Unicode", "unknown values keep the defaults");
+        const IBusSettings odd = readSettings(parseIni("InputMethod=Nope\nModernStyle=yes\nOutputCharset=Nope\nLockWordModifier=Disabled\n"));
+        check(odd.options.inputMethod == "Telex" && odd.options.modernStyle && odd.options.outputCharset == "Unicode", "unknown values keep the defaults");
         check(odd.options.lockWordKey == LockWordKey::None, "LockWordModifier is read by name");
 
         IBusSettings changed                 = defaults;
@@ -101,7 +101,7 @@ namespace {
         changed.options.bracketTransform     = 1;
         changed.options.lockWordKey          = LockWordKey::Alt;
         changed.options.timeFormat           = "%H giờ %M";
-        changed.options.spellCheck           = false;
+        changed.options.modernStyle          = false;
         changed.options.retoneSelection      = false;
         changed.options.rawWordAfterSlash    = false;
         changed.options.retypeAfterSwitch    = false;
@@ -123,13 +123,13 @@ namespace {
     }
 
     void testOneSetting() {
-        const std::string mine = "# my note\nInputMethod=Telex\nSpellCheck=True\n";
-        check(withSetting(mine, "SpellCheck", "False") == "# my note\nInputMethod=Telex\nSpellCheck=False\n", "one key changes, the rest stays");
+        const std::string mine = "# my note\nInputMethod=Telex\nModernStyle=True\n";
+        check(withSetting(mine, "ModernStyle", "False") == "# my note\nInputMethod=Telex\nModernStyle=False\n", "one key changes, the rest stays");
         check(withSetting(mine, "EnableMacro", "True") == mine + "EnableMacro=True\n", "a missing key is added");
-        check(withSetting("#SpellCheck=True\n", "SpellCheck", "False") == "#SpellCheck=True\nSpellCheck=False\n", "a commented key is left alone");
-        check(readSettings(parseIni(withSetting("SpellCheck=True\nSpellCheck=True\n", "SpellCheck", "False"))).options.spellCheck == false, "every copy of the key changes");
-        check(withSetting("A=1\n[Macro/0]\nKey=x\n", "SpellCheck", "False") == "A=1\nSpellCheck=False\n[Macro/0]\nKey=x\n", "a new key goes before the first section");
-        check(withSetting("[S]\nSpellCheck=True\n", "SpellCheck", "False") == "SpellCheck=False\n[S]\nSpellCheck=True\n", "a key inside a section is not the setting");
+        check(withSetting("#ModernStyle=True\n", "ModernStyle", "False") == "#ModernStyle=True\nModernStyle=False\n", "a commented key is left alone");
+        check(readSettings(parseIni(withSetting("ModernStyle=True\nModernStyle=True\n", "ModernStyle", "False"))).options.modernStyle == false, "every copy of the key changes");
+        check(withSetting("A=1\n[Macro/0]\nKey=x\n", "ModernStyle", "False") == "A=1\nModernStyle=False\n[Macro/0]\nKey=x\n", "a new key goes before the first section");
+        check(withSetting("[S]\nModernStyle=True\n", "ModernStyle", "False") == "ModernStyle=False\n[S]\nModernStyle=True\n", "a key inside a section is not the setting");
         check(parseIni(withSetting("", "OutputCharset", "TCVN3 (ABC)")).top.at("OutputCharset") == "TCVN3 (ABC)", "a value with spaces is quoted");
     }
 
@@ -148,7 +148,7 @@ namespace {
         check(readSettings(parseIni(settingsText(changed))).toggleKeys == changed.toggleKeys, "toggle keys round trip");
         changed.toggleKeys = {};
         check(readSettings(parseIni(settingsText(changed))).toggleKeys.empty(), "a key turned off stays off");
-        check(parseIni(settingsText(defaultSettings()) + "SpellCheck=False\n").top.at("SpellCheck") == "False", "a key appended to the file is still a setting");
+        check(parseIni(settingsText(defaultSettings()) + "ModernStyle=False\n").top.at("ModernStyle") == "False", "a key appended to the file is still a setting");
 
         const char* const fcitxKeys = "[ToggleKey]\n0=Alt+z\n2=Control+space\n";
         check(readSettings(parseIni(std::string(FcitxSettings) + fcitxKeys)).toggleKeys == std::vector<std::string>{"Alt+z"},
