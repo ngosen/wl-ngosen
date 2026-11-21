@@ -17,6 +17,7 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 - Cửa sổ cài đặt thêm công tắc “Gõ thô sau dấu / đầu từ (lệnh, đường dẫn)”, mặc định bật như bản fcitx5 và IBus,
   giữ nguyên từ bắt đầu bằng `/` như `/cost`, `/usr/share`; tắt thì nhớ lựa chọn, lưu cài đặt ở wl-ngosen cũng
   không còn làm mất lựa chọn đã lưu từ bản IBus trong tệp cài đặt dùng chung (#18).
+- README không còn bảo người dùng GNOME cài bản cho GNOME: dùng GNOME, KDE hay desktop khác thì cài bản fcitx5 hoặc bản IBus, hai bản tính năng như nhau (#22).
 
 ### Bỏ
 
