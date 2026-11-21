@@ -22,7 +22,7 @@ tag `wl-ngosen-<version>` và ghi tag lõi Ngó Sen đang dùng.
 
 - Bỏ ô "Kiểm tra chính tả" khỏi cửa sổ cài đặt và menu khay, vì nó chỉ có tác dụng khi "Tự khôi phục từ gõ sai"
   đang bật: nay Tự khôi phục luôn so với từ điển, như bản fcitx5 và IBus. Ai từng tắt ô này để giữ dấu cho chữ kiểu
-  chat như `zậy`, `kạ`, hãy thêm chữ đó vào Từ điển tuỳ chỉnh (ngosen/ngosen#112).
+  chat như `zậy`, `kạ`, hãy thêm chữ đó vào Từ điển tuỳ chỉnh (ngosen/ngosen#112) (#21).
 
 ## [0.1.0-1] — 12/11/2026
 
